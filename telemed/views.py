@@ -21,6 +21,10 @@ def login(request):
     return render(request, 'telemed/login.html')
 
 
+def signup(request):
+    return render(request, 'telemed/register.html')
+
+
 def testimonials(request):
     return render(request, 'telemed/testimonials.html')
 

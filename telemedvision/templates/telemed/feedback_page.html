@@ -1,0 +1,17 @@
+{% extends 'telemed/base.html' %}
+{% block title %}Send Feedback - TeleMed Vision{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1>Send Feedback</h1>
+    <p>Please use the feedback form to send us your comments.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    openFeedback();
+});
+</script>
+{% endblock %}
