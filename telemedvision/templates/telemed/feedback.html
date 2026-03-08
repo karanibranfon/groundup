@@ -1,0 +1,76 @@
+{% extends 'telemed/base.html' %}
+{% block title %}Send feedback - TeleMed Vision{% endblock %}
+
+{% block extra_css %}
+   <link rel="stylesheet" href="../../../static/css/output.b9a4961a16f7.css">
+		<link rel="stylesheet" href="../../../static/css/output.4d5edab1d566.css" type="text/css" media="screen">
+	
+{% endblock %}
+
+{% block content %}
+
+<!-- Feedback Modal Overlay - Full screen popup 
+<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;" onclick="if(event.target === this) window.history.back();">
+
+	<div class="card shadow" style="max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation();">
+	
+	--->
+	<div style="position: fixed; top: 0;left: 0;width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5);z-index: 9999; display: flex; justify-content: center; "onclick="if(event.target === this) window.history.back();"> 
+	<div class="card shadow" style=""; onclick="event.stopPropagation();">
+		<div class="card-body p-5">
+			<!-- Close Button -->
+			<button type="button" class="btn-close position-absolute top-0 end-0 m-2" onclick="window.history.back();" aria-label="Close" style="font-size: 0.1 rem;"></button>
+			
+			<!-- Header -->
+			<div class="navbar top-nav">
+		<p style="color: white; font-size: 1.5em;">Send Feedback</p>
+		</div>
+				<p>Thank you for your feedback</br>We review all feedback but cannot guarantee a response.</p>
+		
+			<!-- Upgrade Prompt -->
+			<div class="">
+				<p class="mb-3">Did you know you can upgrade your plan to get customer support?</p>
+				<a href="/pricing" class="btn btn-success" >Register Now</a>
+			</div>
+
+			<!-- Help Instructions -->
+			<div class="mb-4">
+				<p class="fw-bold">To help us assist you as efficiently as possible kindly include:</p>
+				<ol>
+					<li>What you were trying to do</li>
+					<li>What you expected to happen</li>
+					<li>What actually happened including any error messages</li>
+					<li>Steps to reproduce the issue</li>
+				</ol>
+			</div>
+
+			<!-- Feedback Form -->
+			<form id="feedbackForm">
+				<div class="mb-4">
+					<label for="feedbackText" class="form-label">Your Feedback</label>
+					<textarea class="form-control" id="feedbackText" rows="6" 
+						placeholder="Please describe your feedback or issue in detail..." required></textarea>
+				</div>
+
+				<div class="mb-4">
+					<label for="userEmail" class="form-label">Email (Optional)</label>
+					<input type="email" class="form-control" id="userEmail" 
+						placeholder="your.email@example.com">
+					<div class="form-text">We'll only use this to respond to your feedback if needed.</div>
+				</div>
+
+				<!-- Form Buttons -->
+				<div class="d-flex justify-content-between">
+					<button type="button" class="btn btn-secondary" onclick="window.history.back();">
+						Close
+					</button>
+					<button type="submit" class="btn btn-primary">
+						OK
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+
+{% endblock %}

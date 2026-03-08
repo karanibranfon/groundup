@@ -1,0 +1,19 @@
+2026-03-08 10:09:06,974 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.118.126.10:5000
+2026-03-08 10:09:06,975 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-03-08 10:09:06,980 - werkzeug - INFO -  * Restarting with stat
+2026-03-08 10:09:09,878 - werkzeug - WARNING -  * Debugger is active!
+2026-03-08 10:09:09,931 - werkzeug - INFO -  * Debugger PIN: 139-718-083
+2026-03-08 10:09:18,250 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:18] "GET / HTTP/1.1" 200 -
+2026-03-08 10:09:18,891 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:18] "GET /static/css/bootstrap.css HTTP/1.1" 200 -
+2026-03-08 10:09:18,938 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:18] "GET /static/css/output.b9a4961a16f7.css HTTP/1.1" 200 -
+2026-03-08 10:09:18,939 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:18] "GET /static/css/output.4d5edab1d566.css HTTP/1.1" 200 -
+2026-03-08 10:09:19,568 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:19] "GET /static/images/teacher-environment.jpg HTTP/1.1" 200 -
+2026-03-08 10:09:19,579 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:19] "GET /static/images/phone-screenshot.png HTTP/1.1" 200 -
+2026-03-08 10:09:19,593 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:19] "GET /static/images/screenshot-front-page.png HTTP/1.1" 200 -
+2026-03-08 10:09:24,647 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:24] "GET /send_feedback HTTP/1.1" 200 -
+2026-03-08 10:09:25,162 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:25] "[36mGET /static/css/bootstrap.css HTTP/1.1[0m" 304 -
+2026-03-08 10:09:25,199 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:25] "[36mGET /static/css/output.b9a4961a16f7.css HTTP/1.1[0m" 304 -
+2026-03-08 10:09:25,205 - werkzeug - INFO - 127.0.0.1 - - [08/Mar/2026 10:09:25] "[36mGET /static/css/output.4d5edab1d566.css HTTP/1.1[0m" 304 -

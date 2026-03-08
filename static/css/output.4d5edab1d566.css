@@ -1,0 +1,160 @@
+.youtube-video-alternative {
+  display:none
+}
+@media (max-width:480px) {
+  .mathree {
+    padding:20px
+  }
+  .mathree h1 {
+    font-size:40px
+  }
+}
+@media (max-width:767px) {
+  .mathree {
+    padding:40px
+  }
+  .bumf-left {
+    margin-left:0;
+    width:100%;
+    float:left
+  }
+}
+@media (max-width:979px) {
+  .mathree {
+    padding:40px
+  }
+  .bumf-left {
+    margin-left:0;
+    width:100%;
+    float:left
+  }
+}
+@media (min-width:1200px) {
+  .bumf-left {
+    margin-left:0;
+    margin-right:20px;
+    width:40.4255%;
+    float:left
+  }
+}
+.mathree h1 {
+  font-size:50px;
+  margin-top:12px;
+  padding-bottom:25px;
+  font-weight:bold
+}
+.bumf-left {
+  margin-right:30px
+}
+#id_main_screenshot {
+  margin-top:10px;
+  box-shadow:12px 12px 29px #555
+}
+.carousel {
+  height:250px
+}
+.details-stripe {
+  padding:20px;
+  min-height:200px
+}
+.details-stripe p {
+  font-size:16px!important;
+  line-height:150%
+}
+.details-stripe h2 {
+  margin-bottom:20px;
+  font-weight:400
+}
+.details-stripe h3 {
+  margin-bottom:15px;
+  font-weight:400
+}
+.details-stripe h4 {
+  margin-bottom:10px;
+  font-weight:500
+}
+#id_buttons {
+  padding-top:20px;
+  padding-bottom:20px
+}
+#id_education_details {
+  background-color:#5D707F;
+  color:#EEEEEE;
+  margin-top:50px
+}
+#id_education_details h1 {
+  color:#EEEEEE
+}
+#id_education_details h2 {
+  color:#EEEEEE
+}
+#id_education_details a {
+  color:#BAE0FF!important
+}
+#id_education_details a.btn {
+  color:#FFFFFF!important
+}
+#id_develop_anywhere_details {
+  background-color:white
+}
+#id_viewing_details {
+  background-color:#5D707F;
+  color:#EEEEEE;
+  margin-top:50px
+}
+#id_viewing_details h1 {
+  color:#EEEEEE
+}
+#id_viewing_details h2 {
+  color:#EEEEEE
+}
+#id_viewing_details h3 {
+  color:#EEEEEE
+}
+#id_viewing_details a {
+  color:#BAE0FF!important
+}
+#id_viewing_details a.btn {
+  color:#FFFFFF!important
+}
+#id_support_details {
+  background-color:#6DBEFF
+}
+#id_support_details table {
+  border-collapse:separate;
+  border-spacing:10px
+}
+#id_support_details a {
+  color:#FFFFFF!important
+}
+.testimonial-content {
+  padding-right:50px
+}
+.testimonial-content::before {
+  color:inherit!important
+}
+.testimonial-person {
+  padding-right:50px
+}
+.testimonial-date {
+  padding-right:50px
+}
+.mathree {
+  -webkit-border-radius:0;
+  -moz-border-radius:0;
+  border-radius:0;
+  padding:30px;
+  margin-top:12px
+}
+h3 {
+  margin-top:0
+}
+#id_company_info_strip {
+  color:#888888;
+  padding-top:15px;
+  padding-bottom:15px;
+  margin-left:0;
+  margin-top:30px;
+  margin-bottom:30px;
+  border-radius:6px
+}

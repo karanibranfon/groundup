@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+<head>
+    <meta charset="utf-8">
+    <title>Login - TeleMed Vision</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to TeleMed Vision - Send, Receive And View Medical Images Securely On The Web">
+    <meta name="author" content="TeleMed Vision">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/bootstrap.css" type="text/css" media="screen">
+    <link rel="stylesheet" href="../static/css/output.b9a4961a16f7.css">
+    <link rel="stylesheet" href="../static/css/output.4d5edab1d566.css" type="text/css" media="screen">
+</head>
+<body style="height:100%">
+    <div style="min-height: 100%; position: relative;">
+        
+        <!-- Top Navigation -->
+        <nav class="navbar top-nav d-none d-md-block">
+            <div class="container">
+                <ul class="nav navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="feedback_link nav-link" href="/send_feedback" target="_parent">
+                            Send Feedback
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="help_link nav-link" href="/help" target="_parent">Help</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="pricing_link nav-link" style="font-weight: bold;" href="/pricing" target="_parent">Pricing & Signup</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        
+        <!-- Main Navigation -->
+        <nav class="navbar navbar-expand-lg primary-navbar bg-white">
+            <div class="container">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main_nav" 
+                        aria-controls="main_nav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <a class="navbar-brand" href="/">
+                    <img id="id_logo" src="../static/images/MA-logo.png" width="205" alt="TeleMed Vision Logo">
+                </a>
+                
+                <div id="main_nav" class="collapse navbar-collapse">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item d-md-none">
+                            <a class="feedback_link nav-link" href="/send_feedback" target="_parent">Send Feedback</a>
+                        </li>
+                        <li class="nav-item d-md-none">
+                            <a class="help_link nav-link" href="/help" target="_parent">Help</a>
+                        </li>
+                        <li class="nav-item d-md-none">
+                            <a class="pricing_link nav-link" style="font-weight: bold;" href="/pricing" target="_parent">
+                                Pricing and Signup
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Login Content -->
+        <div style="background-color: #e6f3ff; padding: 60px 0; min-height: calc(100vh - 200px);">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-5 col-md-7">
+                        <div class="card shadow-lg">
+                            <div class="card-body p-5">
+                                <div class="text-center mb-4">
+                                    <img src="../static/images/MA-logo.png" width="180" alt="TeleMed Vision Logo" class="mb-3">
+                                    <h2 class="mb-1">Welcome Back</h2>
+                                    <p class="text-muted">Login to your TeleMed Vision account</p>
+                                </div>
+                                
+                                <form id="loginForm">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="email" name="email" 
+                                               placeholder="Enter your email" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="password" name="password" 
+                                               placeholder="Enter your password" required>
+                                    </div>
+                                    
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                                        <label class="form-check-label" for="remember">Remember me</label>
+                                    </div>
+                                    
+                                    <div class="d-grid mb-3">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            Login
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="text-center">
+                                        <a href="#" class="text-decoration-none">Forgot your password?</a>
+                                    </div>
+                                </form>
+                                
+                                <hr class="my-4">
+                                
+                                <div class="text-center">
+                                    <p class="mb-0">Don't have an account?</p>
+                                    <a href="/pricing" class="btn btn-success mt-2">
+                                        Sign up for free
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="bg-light py-4">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>TeleMed Vision</h6>
+                        <p class="mb-1">
+                            <a href="/about" class="text-decoration-none">About TeleMed Vision</a>
+                        </p>
+                        <p class="mb-1">
+                            <a href="/media" class="text-decoration-none">Media Resources</a>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Legal</h6>
+                        <p class="mb-1">
+                            <a href="/terms" class="text-decoration-none">Terms</a>
+                        </p>
+                        <p class="mb-1">
+                            <a href="/privacy" class="text-decoration-none">Privacy and Cookies</a>
+                        </p>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <p class="mb-0 small">Copyright © 2026 TeleMed Vision</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Bootstrap 5 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            
+            // Basic validation
+            if (!email || !password) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Here you would typically send the login request to your backend
+            console.log('Login attempt:', { email, remember });
+            
+            // Simulate login process
+            // In a real application, this would be an API call
+            alert('Login functionality would be implemented here. This is a template.');
+        });
+    </script>
+</body>
+</html>
