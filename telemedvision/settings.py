@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'accounts',
     'telemed',
     'chat',
     'channels',
@@ -131,16 +132,34 @@ MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
 
+# JWT Settings
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
 # Login URL
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'chat_list'
-LOGOUT_REDIRECT_URL = 'landing'
+LOGIN_REDIRECT_URL = 'app_dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+# Email settings (configure for production)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 25
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'noreply@telemedvision.com'
 
 # Channels
 ASGI_APPLICATION = 'telemedvision.asgi.application'

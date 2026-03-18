@@ -254,7 +254,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def update_online_status(self, is_online):
         from chat.models import Profile
-        profile = self.user.profile
+        profile = self.user.chat_profile
         profile.is_online = is_online
         profile.save()
 

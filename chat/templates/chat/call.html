@@ -1,8 +1,102 @@
 {% extends 'chat/base.html' %}
-{% block title %}Page{% endblock %}
+
+{% block title %}{{ call_type|title }} Call{% endblock %}
+
 {% block content %}
-<div style="padding: 40px; text-align: center;">
-    <h2>Page Under Construction</h2>
-    <a href="/chat/">Back to Chat</a>
+<div style="min-height: 100vh; background: linear-gradient(135deg, #075E54, #128C7E); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;">
+    <div style="text-align: center;">
+        <div style="width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 30px; background: #25D366; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            {% if receiver.chat_profile.avatar %}
+                <img src="{{ receiver.chat_profile.avatar.url }}" style="width: 100%; height: 100%; object-fit: cover;">
+            {% else %}
+                <span style="font-size: 60px;">{{ receiver.username.0|upper }}</span>
+            {% endif %}
+        </div>
+        
+        <h2 style="margin-bottom: 10px;">{{ receiver.username }}</h2>
+        <p id="callStatus" style="opacity: 0.8;">{{ call_type|title }} calling...</p>
+        
+        <video id="localVideo" autoplay muted style="position: fixed; top: 20px; right: 20px; width: 120px; height: 90px; border-radius: 10px; object-fit: cover; border: 2px solid white; display: none;"></video>
+        
+        <video id="remoteVideo" autoplay style="display: none;"></video>
+        
+        <div style="margin-top: 50px; display: flex; gap: 30px; justify-content: center;">
+            <button onclick="toggleMute()" id="muteBtn" style="width: 60px; height: 60px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 20px; cursor: pointer;">
+                <i class="fas fa-microphone"></i>
+            </button>
+            
+            {% if call_type == 'video' %}
+            <button onclick="toggleCamera()" id="cameraBtn" style="width: 60px; height: 60px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 20px; cursor: pointer;">
+                <i class="fas fa-video"></i>
+            </button>
+            {% endif %}
+            
+            <button onclick="endCall()" style="width: 60px; height: 60px; border-radius: 50%; border: none; background: #FF5252; color: white; font-size: 20px; cursor: pointer;">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
 </div>
+
+<script>
+const receiverId = {{ receiver.id }};
+const callType = '{{ call_type }}';
+let localStream;
+let isMuted = false;
+let isCameraOff = false;
+
+async function startCall() {
+    try {
+        const constraints = {
+            audio: true,
+            video: callType === 'video'
+        };
+        
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        const localVideo = document.getElementById('localVideo');
+        localVideo.srcObject = localStream;
+        localVideo.style.display = 'block';
+        
+        console.log('Call started, connecting to peer...');
+        
+    } catch (err) {
+        console.error('Error accessing media devices:', err);
+        document.getElementById('callStatus').textContent = 'Failed to access camera/microphone';
+    }
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    if (localStream) {
+        localStream.getAudioTracks().forEach(track => {
+            track.enabled = !isMuted;
+        });
+    }
+    const btn = document.getElementById('muteBtn');
+    btn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+    btn.style.background = isMuted ? '#FF5252' : 'rgba(255,255,255,0.2)';
+}
+
+function toggleCamera() {
+    isCameraOff = !isCameraOff;
+    if (localStream) {
+        localStream.getVideoTracks().forEach(track => {
+            track.enabled = !isCameraOff;
+        });
+    }
+    const btn = document.getElementById('cameraBtn');
+    btn.innerHTML = isCameraOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
+    btn.style.background = isCameraOff ? '#FF5252' : 'rgba(255,255,255,0.2)';
+}
+
+function endCall() {
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    window.location.href = '/calls/';
+}
+
+startCall();
+</script>
 {% endblock %}

@@ -1,12 +1,9 @@
 import os
-import json
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse, FileResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, FileResponse
 from django.conf import settings
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -30,38 +27,6 @@ def help_view(request):
 
 def pricing(request):
     return render(request, 'telemed/pricing.html')
-
-
-def login_view(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('dashboard')
-        else:
-            return render(request, 'telemed/login.html', {'error': 'Invalid credentials'})
-    return render(request, 'telemed/login.html')
-
-
-def signup(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        if User.objects.filter(username=username).exists():
-            return render(request, 'telemed/register.html', {'error': 'Username already exists'})
-        user = User.objects.create_user(username=username, email=email, password=password)
-        UserProfile.objects.create(user=user)
-        login(request, user)
-        return redirect('dashboard')
-    return render(request, 'telemed/register.html')
-
-
-def logout_view(request):
-    logout(request)
-    return redirect('home')
 
 
 def testimonials(request):

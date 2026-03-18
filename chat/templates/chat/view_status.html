@@ -1,8 +1,62 @@
 {% extends 'chat/base.html' %}
-{% block title %}Page{% endblock %}
+
+{% block title %}View Status{% endblock %}
+
 {% block content %}
-<div style="padding: 40px; text-align: center;">
-    <h2>Page Under Construction</h2>
-    <a href="/chat/">Back to Chat</a>
+<div style="min-height: 100vh; background: black; position: relative;">
+    <a href="{% url 'status_list' %}" style="position: absolute; top: 20px; left: 20px; z-index: 100; color: white; font-size: 24px;">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 100; color: white;">
+        <i class="fas fa-eye"></i> {{ status.views.count }}
+    </div>
+    
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 400px;">
+        {% if status.media_type == 'image' and status.media %}
+            <img src="{{ status.media.url }}" style="width: 100%; border-radius: 10px;">
+        {% elif status.media_type == 'video' and status.media %}
+            <video controls autoplay style="width: 100%; border-radius: 10px;">
+                <source src="{{ status.media.url }}">
+            </video>
+        {% endif %}
+        
+        {% if status.text %}
+            <div style="background: rgba(0,0,0,0.7); color: white; padding: 15px; border-radius: 10px; margin-top: 10px; text-align: center;">
+                {{ status.text }}
+            </div>
+        {% endif %}
+    </div>
+    
+    <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 400px; padding: 0 20px;">
+        <div style="display: flex; align-items: center; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 5px 15px;">
+            <img src="{% if status.user.chat_profile.avatar %}{{ status.user.chat_profile.avatar.url }}{% else %}#{% endif %}" 
+                 style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px;">
+            <span style="color: white; font-weight: 500;">{{ status.user.username }}</span>
+            <span style="color: rgba(255,255,255,0.7); margin-left: auto; font-size: 12px;">
+                {{ status.created_at|timesince }} ago
+            </span>
+        </div>
+        
+        <form method="post" style="margin-top: 15px; display: flex; gap: 10px;">
+            {% csrf_token %}
+            <input type="text" name="content" placeholder="Reply to status..." 
+                   style="flex: 1; padding: 12px; border: none; border-radius: 20px; background: white;">
+            <button type="submit" style="padding: 12px 20px; border: none; border-radius: 20px; background: #25D366; color: white;">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+        
+        {% if replies %}
+            <div style="margin-top: 15px; max-height: 100px; overflow-y: auto;">
+                {% for reply in replies %}
+                    <div style="background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 10px; margin-bottom: 5px;">
+                        <span style="color: white; font-weight: 500;">{{ reply.user.username }}:</span>
+                        <span style="color: rgba(255,255,255,0.9);">{{ reply.content }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

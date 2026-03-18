@@ -1,141 +1,74 @@
-<!DOCTYPE html>
-<html lang="en" style="height: 100%">
-<head>
-    <meta charset="utf-8">
-    <title>Login - TeleMed Vision</title>
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Login to TeleMed Vision - Send, Receive And View Medical Images Securely On The Web">
-    <meta name="author" content="TeleMed Vision">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../static/css/bootstrap.css" type="text/css" media="screen">
-    <link rel="stylesheet" href="../static/css/output.b9a4961a16f7.css">
-    <link rel="stylesheet" href="../static/css/output.4d5edab1d566.css" type="text/css" media="screen">
-</head>
-<body style="height:100%">
-    <div style="min-height: 100%; position: relative;">
-        
-        <!-- Top Navigation -->
-        <nav class="navbar top-nav d-none d-md-block">
-            <div class="container">
-                <ul class="nav navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="feedback_link nav-link" href="/send_feedback" target="_parent">
-                            Send Feedback
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="help_link nav-link" href="/help" target="_parent">Help</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="pricing_link nav-link" style="font-weight: bold;" href="/pricing" target="_parent">Pricing &amp; Signup</a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-        
-        <!-- Main Navigation -->
-        <nav class="navbar navbar-expand-lg primary-navbar bg-white">
-            <div class="container">
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main_nav" 
-                        aria-controls="main_nav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <a class="navbar-brand" href="/">
-                    <img id="id_logo" src="../static/images/MA-logo.png" width="205" alt="TeleMed Vision Logo">
-                </a>
-                
-                <div id="main_nav" class="collapse navbar-collapse">
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item d-md-none">
-                            <a class="feedback_link nav-link" href="/send_feedback" target="_parent">Send Feedback</a>
-                        </li>
-                        <li class="nav-item d-md-none">
-                            <a class="help_link nav-link" href="/help" target="_parent">Help</a>
-                        </li>
-                        <li class="nav-item d-md-none">
-                            <a class="pricing_link nav-link" style="font-weight: bold;" href="/pricing" target="_parent">
-                                Pricing and Signup
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-        
-        <!-- Login Content -->
-        <div class="container">
-            <div class="row">
-                <div class="col-md-5 offset-md-3">
+{% extends 'telemed/base.html' %}
+
+{% block title %}Login - TeleMed Vision{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 50px; padding-bottom: 100px;">
+    <div class="row">
+        <div class="col-md-5 offset-md-3">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">Log in to TeleMed Vision</h2>
                     
-                    <h1>Log in</h1>
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                {{ error }}
+                            {% endfor %}
+                        {% endfor %}
+                        {% if form.non_field_errors %}
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     
-                    <form class="form" action="" method="post" id="loginForm">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
                         {% csrf_token %}
-                        <p class="form-group">
-                            <input type="text" name="auth-username" placeholder="Username or email address" 
-                                   tabindex="1" autocorrect="off" autocapitalize="none" 
-                                   class="form-control" maxlength="100" required="" id="id_auth-username">
-                            <span class="help-block">
-                                No account? <a href="/pricing" id="id_signup_link">Sign up here!</a>
-                            </span>
-                        </p>
-                        <p class="form-group">
-                            <input type="password" name="auth-password" placeholder="Password" 
-                                   tabindex="2" class="form-control" required="" id="id_auth-password">
-                            <span class="help-block">
-                                <a href="/password_reset">Forgotten password?</a>
-                            </span>
-                        </p>
                         
-                        <div class="clearfix"></div>
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">Username</label>
+                            <input type="text" name="username" id="id_username" 
+                                   class="form-control" placeholder="Enter your username" 
+                                   autocomplete="username" required autofocus>
+                        </div>
                         
-                        <button id="id_next" type="submit" class="btn btn-primary">Log in</button>
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label">Password</label>
+                            <input type="password" name="password" id="id_password" 
+                                   class="form-control" placeholder="Enter your password" 
+                                   autocomplete="current-password" required>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="id_remember_me" name="remember_me">
+                            <label class="form-check-label" for="id_remember_me">Remember me</label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Log in</button>
+                        
+                        <div class="text-center">
+                            <a href="{% url 'password_reset' %}" class="text-muted">Forgot your password?</a>
+                        </div>
                     </form>
                     
+                    <hr class="my-4">
+                    
+                    <p class="text-center text-muted">
+                        Don't have an account? 
+                        <a href="{% url 'signup' %}">Sign up here</a>
+                    </p>
                 </div>
             </div>
         </div>
-        
-        <!-- Footer Spacer -->
-        <div class="footer-spacer" style="height: 50px;"></div>
-        
-        <!-- Footer -->
-        <footer class="bg-light py-4">
-            <div class="container">
-                <div class="row">
-                    <div class="col-md-12 text-center">
-                        <p class="mb-1">
-                            Copyright &copy; 2026 <a href="/">TeleMed Vision</a> &mdash;
-                            <a href="/terms">Terms</a> &mdash;
-                            <a href="/privacy">Privacy &amp; Cookies</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </footer>
     </div>
-    
-    <!-- Bootstrap 5 JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('id_auth-username').value;
-            const password = document.getElementById('id_auth-password').value;
-            
-            if (!username || !password) {
-                alert('Please fill in all fields');
-                return;
-            }
-            
-            console.log('Login attempt:', { username: username });
-            alert('Login functionality would be implemented here. This is a template.');
-        });
-    </script>
-</body>
-</html>
+</div>
+{% endblock %}
