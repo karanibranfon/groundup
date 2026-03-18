@@ -1,0 +1,88 @@
+{% extends "telemed/base.html" %}
+{% load static %}
+
+{% block title %}Measurements - TeleMed Vision{% endblock %}
+
+{% block content %}
+<main>
+    <div class="container" style="padding-top: 20px;">
+        <div class="page-header">
+            <h1>
+                <span>Measurements</span>
+                <small>Take measurements on medical images</small>
+            </h1>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Select Image</h5>
+                    </div>
+                    <div class="card-body">
+                        <select class="form-control mb-3" id="measureStudy">
+                            <option value="">Select study...</option>
+                            {% for study in studies %}
+                            <option value="{{ study.id }}">{{ study.patient.name }} - {{ study.study_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5>Tools</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" id="lineTool">
+                                <i class="bi bi-line"></i> Line
+                            </button>
+                            <button class="btn btn-outline-primary" id="angleTool">
+                                <i class="bi bi-triangle"></i> Angle
+                            </button>
+                            <button class="btn btn-outline-primary" id="ellipseTool">
+                                <i class="bi bi-circle"></i> Ellipse
+                            </button>
+                            <button class="btn btn-outline-primary" id="arrowTool">
+                                <i class="bi bi-arrow-right"></i> Arrow
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5>Measurements</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm" id="measurementsTable">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Value</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="3" class="text-muted text-center">No measurements yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-9">
+                <div class="card" style="min-height: 500px; display: flex; align-items: center; justify-content: center;">
+                    <div class="text-center text-muted">
+                        <i class="bi bi-rulers" style="font-size: 64px;"></i>
+                        <p class="mt-3">Select an image to start measuring</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

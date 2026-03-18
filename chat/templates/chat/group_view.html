@@ -1,0 +1,118 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}{{ group.name }} - WhatsApp Clone{% endblock %}
+
+{% block content %}
+<div class="app-container">
+    <div class="sidebar hidden" id="sidebar">
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-arrow-left back-btn" onclick="showSidebar()"></i>
+                <div class="chat-avatar" style="width: 35px; height: 35px;">
+                    {% if user.chat_profile.avatar %}
+                        <img src="{{ user.chat_profile.avatar.url }}">
+                    {% else %}
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--secondary); color: white;">
+                            {{ user.username.0|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+                <span>{{ user.username }}</span>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'group_info' group.id %}"><i class="fas fa-info-circle"></i></a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content" id="mainContent">
+        <div class="chat-header">
+            <i class="fas fa-arrow-left back-btn" onclick="showSidebar()"></i>
+            <div class="chat-avatar" style="width: 40px; height: 40px; margin-right: 15px;">
+                {% if group.avatar %}
+                    <img src="{{ group.avatar.url }}">
+                {% else %}
+                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--primary); color: white; font-size: 18px;">
+                        {{ group.name.0|upper }}
+                    </div>
+                {% endif %}
+            </div>
+            <div style="flex: 1;">
+                <h2>{{ group.name }}</h2>
+                <span style="font-size: 12px; opacity: 0.8;">{{ group.members.count }} participants</span>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'group_info' group.id %}" title="Group Info"><i class="fas fa-info-circle"></i></a>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            {% for msg in messages %}
+                <div class="message {% if msg.sender == user %}sent{% else %}received{% endif %}" data-id="{{ msg.id }}">
+                    <div style="font-size: 11px; color: var(--primary); font-weight: 500; margin-bottom: 2px;">{{ msg.sender.username }}</div>
+                    {% if msg.message_type == 'image' %}
+                        {% if msg.attachments.first %}
+                            <img src="{{ msg.attachments.first.file.url }}" class="message-image">
+                        {% endif %}
+                    {% elif msg.message_type == 'audio' %}
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-play-circle" style="font-size: 24px; color: var(--primary);"></i>
+                            <audio controls style="height: 30px;">
+                                {% if msg.attachments.first %}<source src="{{ msg.attachments.first.file.url }}">{% endif %}
+                            </audio>
+                        </div>
+                    {% else %}
+                        <div class="message-content">{{ msg.content }}</div>
+                    {% endif %}
+                    
+                    <div class="message-meta">
+                        <span>{{ msg.timestamp|date:"H:i" }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div class="chat-input-area">
+            <button onclick="document.getElementById('fileInput').click()" title="Attach"><i class="fas fa-paperclip"></i></button>
+            <input type="file" id="fileInput" style="display: none;">
+            <input type="text" id="messageInput" placeholder="Type a message" onkeypress="handleGroupTyping(event)">
+            <button class="send-btn" onclick="sendGroupMessage()" title="Send"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+const groupId = {{ group.id }};
+
+function sendGroupMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (content) {
+        const formData = new FormData();
+        formData.append('content', content);
+        formData.append('message_type', 'text');
+        
+        fetch(`/groups/${groupId}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        }).then(() => location.reload());
+    }
+}
+
+function handleGroupTyping(event) {
+    if (event.key === 'Enter') {
+        sendGroupMessage();
+    }
+}
+
+function showSidebar() {
+    document.getElementById('sidebar').classList.toggle('hidden');
+}
+
+document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+</script>
+{% endblock %}

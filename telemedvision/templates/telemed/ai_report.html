@@ -1,0 +1,282 @@
+{% extends "telemed/base.html" %}
+{% load static %}
+
+{% block title %}AI Report Generator - TeleMed Vision{% endblock %}
+
+{% block extra_css %}
+<style>
+.report-container {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 30px;
+    margin-top: 20px;
+}
+
+.report-header {
+    border-bottom: 2px solid #139FD7;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.report-section {
+    margin-bottom: 25px;
+}
+
+.report-section h4 {
+    color: #139FD7;
+    margin-bottom: 10px;
+}
+
+.report-finding {
+    background: #f8f9fa;
+    padding: 15px;
+    border-left: 4px solid #139FD7;
+    margin-bottom: 10px;
+}
+
+.report-confidence {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.confidence-bar {
+    flex: 1;
+    height: 10px;
+    background: #e0e0e0;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-left: 15px;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #139FD7);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<main>
+    <div class="container" style="padding-top: 20px;">
+        <div class="page-header">
+            <h1>
+                <span>AI Report Generator</span>
+                <small>Automated medical image analysis</small>
+            </h1>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Select Study</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="reportStudy" class="form-label">Choose a study to analyze:</label>
+                            <select class="form-control" id="reportStudy">
+                                <option value="">Select study...</option>
+                                {% for study in studies %}
+                                <option value="{{ study.id }}">{{ study.patient.name }} - {{ study.study_type }} ({{ study.image_count }} images)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div id="studyPreview" class="text-muted" style="display: none;">
+                            <hr>
+                            <p id="previewInfo"></p>
+                        </div>
+                        <button id="generateBtn" class="btn btn-primary w-100 mt-3" disabled>
+                            <i class="bi bi-robot"></i> Generate Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5>Quota Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Images used today: <strong>{{ quota_used }} / {{ quota_limit }}</strong></p>
+                        <div class="progress">
+                            <div class="progress-bar {% if quota_percent >= 80 %}bg-danger{% elif quota_percent >= 50 %}bg-warning{% endif %}" 
+                                 style="width: {{ quota_percent }}%"></div>
+                        </div>
+                        {% if quota_remaining == 0 %}
+                        <div class="alert alert-warning mt-3">
+                            <small>You've reached your daily limit. <a href="/pricing">Upgrade</a> for more.</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="report-container" id="reportContainer">
+                    <div class="text-center text-muted" id="reportPlaceholder">
+                        <i class="bi bi-file-earmark-text" style="font-size: 64px;"></i>
+                        <p class="mt-3">Select a study and click "Generate Report" to create an AI analysis.</p>
+                        <p class="text-muted"><small>Reports use 1 image from your daily quota.</small></p>
+                    </div>
+
+                    <div id="reportContent" style="display: none;">
+                        <div class="report-header">
+                            <h2>AI Analysis Report</h2>
+                            <p class="text-muted" id="reportMeta"></p>
+                        </div>
+
+                        <div class="report-section">
+                            <h4><i class="bi bi-clipboard-check"></i> Summary</h4>
+                            <p id="reportSummary"></p>
+                        </div>
+
+                        <div class="report-section">
+                            <h4><i class="bi bi-search"></i> Findings</h4>
+                            <div id="reportFindings"></div>
+                        </div>
+
+                        <div class="report-section">
+                            <h4><i class="bi bi-lightbulb"></i> Recommendations</h4>
+                            <div id="reportRecommendations"></div>
+                        </div>
+
+                        <div class="report-confidence">
+                            <strong>AI Confidence:</strong>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill"></div>
+                            </div>
+                            <span id="confidencePercent" class="ms-2"></span>
+                        </div>
+
+                        <div class="mt-4">
+                            <button class="btn btn-default" onclick="printReport()">
+                                <i class="bi bi-printer"></i> Print Report
+                            </button>
+                            <button class="btn btn-default" onclick="downloadReport()">
+                                <i class="bi bi-download"></i> Download PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="reportLoading" style="display: none;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3">Analyzing medical images...</p>
+                            <p class="text-muted"><small>This may take a few moments</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const studies = [
+    {% for study in studies %}
+    {
+        id: '{{ study.id }}',
+        patient: '{{ study.patient.name }}',
+        type: '{{ study.study_type }}',
+        imageCount: {{ study.image_count }},
+        description: '{{ study.description|default:""|escapejs }}'
+    },
+    {% endfor %}
+];
+
+document.getElementById('reportStudy').addEventListener('change', function() {
+    const studyId = this.value;
+    const preview = document.getElementById('studyPreview');
+    const previewInfo = document.getElementById('previewInfo');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    if (studyId) {
+        const study = studies.find(s => s.id === studyId);
+        preview.style.display = 'block';
+        previewInfo.innerHTML = `
+            <strong>Patient:</strong> ${study.patient}<br>
+            <strong>Type:</strong> ${study.type}<br>
+            <strong>Images:</strong> ${study.imageCount}<br>
+            ${study.description ? `<strong>Description:</strong> ${study.description}` : ''}
+        `;
+        generateBtn.disabled = study.imageCount === 0;
+        if (study.imageCount === 0) {
+            generateBtn.title = 'This study has no images';
+        } else {
+            generateBtn.title = '';
+        }
+    } else {
+        preview.style.display = 'none';
+        generateBtn.disabled = true;
+    }
+});
+
+document.getElementById('generateBtn').addEventListener('click', function() {
+    const studyId = document.getElementById('reportStudy').value;
+    if (!studyId) return;
+    
+    document.getElementById('reportPlaceholder').style.display = 'none';
+    document.getElementById('reportContent').style.display = 'none';
+    document.getElementById('reportLoading').style.display = 'block';
+    
+    fetch(`/api/studies/${studyId}/generate-report`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById('reportLoading').style.display = 'none';
+        
+        if (d.analysis) {
+            displayReport(d.analysis, studyId);
+        } else {
+            alert(d.message || 'Error generating report');
+            document.getElementById('reportPlaceholder').style.display = 'block';
+        }
+    })
+    .catch(err => {
+        document.getElementById('reportLoading').style.display = 'none';
+        document.getElementById('reportPlaceholder').style.display = 'block';
+        alert('Error generating report');
+    });
+});
+
+function displayReport(analysis, studyId) {
+    const study = studies.find(s => s.id === studyId);
+    
+    document.getElementById('reportMeta').textContent = 
+        `${study.patient} - ${study.type} | Generated: ${new Date().toLocaleString()}`;
+    document.getElementById('reportSummary').textContent = analysis.summary;
+    
+    const findingsDiv = document.getElementById('reportFindings');
+    findingsDiv.innerHTML = analysis.findings.map(f => 
+        `<div class="report-finding">${f}</div>`
+    ).join('');
+    
+    const recsDiv = document.getElementById('reportRecommendations');
+    recsDiv.innerHTML = analysis.recommendations.map(r => 
+        `<div class="report-finding">${r}</div>`
+    ).join('');
+    
+    document.getElementById('confidenceFill').style.width = `${analysis.confidence * 100}%`;
+    document.getElementById('confidencePercent').textContent = `${(analysis.confidence * 100).toFixed(0)}%`;
+    
+    document.getElementById('reportContent').style.display = 'block';
+}
+
+function printReport() {
+    window.print();
+}
+
+function downloadReport() {
+    alert('PDF download coming soon!');
+}
+</script>
+{% endblock %}

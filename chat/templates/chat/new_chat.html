@@ -1,0 +1,54 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}New Chat - WhatsApp Clone{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; background: var(--bg-light); padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="background: white; border-radius: 10px; overflow: hidden;">
+            <div style="background: var(--primary); padding: 15px; color: white;">
+                <a href="{% url 'chat_list' %}" style="color: white; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+                <h2 style="margin-top: 10px;">New Chat</h2>
+            </div>
+            
+            <div style="padding: 15px;">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if contacts %}
+                        <h3 style="margin-bottom: 15px; color: var(--text-dark);">Select a contact</h3>
+                        {% for contact in contacts %}
+                            <button type="submit" name="user_id" value="{{ contact.user.id }}" 
+                                    style="width: 100%; display: flex; align-items: center; padding: 12px; border: none; background: none; cursor: pointer; text-align: left; border-bottom: 1px solid #eee;">
+                                <div class="chat-avatar" style="width: 45px; height: 45px; margin-right: 15px;">
+                                    {% if contact.user.chat_profile.avatar %}
+                                        <img src="{{ contact.user.chat_profile.avatar.url }}">
+                                    {% else %}
+                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--secondary); color: white; font-size: 18px;">
+                                            {{ contact.user.username.0|upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 500; color: var(--text-dark);">
+                                        {% if contact.nickname %}{{ contact.nickname }}{% else %}{{ contact.user.username }}{% endif %}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-light);">{{ contact.user.chat_profile.about|default:"" }}</div>
+                                </div>
+                            </button>
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align: center; padding: 40px; color: var(--text-light);">
+                            <i class="fas fa-user-plus" style="font-size: 40px; margin-bottom: 15px;"></i>
+                            <p>No contacts yet</p>
+                            <a href="{% url 'contacts' %}" class="btn btn-primary" style="margin-top: 15px; text-decoration: none;">Add Contacts</a>
+                        </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends "telemed/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - TeleMed Vision{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<main>
+    <div class="container">
+        <div class="page-header">
+            <h1>
+                <span>Dashboard</span>
+                <small>Welcome, <a href="/account/">{{ username }}</a></small>
+            </h1>
+        </div>
+
+        <div class="row status">
+            <div class="col-md-9">
+                <div class="quota-section">
+                    <p>
+                        <strong><span style="display: inline-block">Image Processing Quota:</span></strong>
+                        <span style="display: inline-block">
+                            {{ quota_used }} of {{ quota_limit }} images used ({{ quota_percent }}%)
+                        </span>
+                    </p>
+                    <div class="quota-bar">
+                        <div class="quota-bar-fill {% if quota_percent >= 80 %}danger{% elif quota_percent >= 50 %}warning{% endif %}" 
+                             style="width: {{ quota_percent }}%"></div>
+                    </div>
+                    <p class="text-muted" style="margin-top: 5px; font-size: 12px;">
+                        Resets daily at midnight UTC
+                    </p>
+                </div>
+                <p class="storage-status">
+                    <strong>File Storage:</strong>
+                    <span id="id_quota_summary">
+                        View your uploaded medical images and studies
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-3">
+                <div class="status-buttons">
+                    <a href="/pricing" class="btn btn-primary">Upgrade Account</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-columns">
+            <div class="row">
+                <div class="col-sm-6 col-md-3">
+                    <div class="dashboard-panel images_panel">
+                        <h3 class="dashboard-panel__headline">
+                            <a href="/images/">
+                                <small>Recent</small><br>
+                                Images
+                            </a>
+                        </h3>
+
+                        {% if recent_images %}
+                        <table class="table dashboard-table">
+                            <tbody>
+                                {% for image in recent_images %}
+                                <tr>
+                                    <td>
+                                        <a class="dashboard-recent-file" href="/api/images/{{ image.id }}/file">
+                                            <i class="bi bi-image file-icon"></i>
+                                            <span class="text-muted file-path">{{ image.study.study_type }}/</span><wbr>{{ image.original_filename }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted">
+                            <em>You have no recent images.</em>
+                        </p>
+                        {% endif %}
+
+                        <h3>New Image:</h3>
+                        <div class="dashboard-panel__buttons">
+                            <a href="/tools/dicom-viewer" class="btn btn-primary">
+                                <i class="bi bi-plus"></i> Open Viewer
+                            </a>
+
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Sample Images <span class="caret"></span>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <p><strong>Sample Images</strong></p>
+                                    <a href="/tools/dicom-viewer" class="btn btn-primary">Knee MRI</a>
+                                    <a href="/tools/dicom-viewer" class="btn btn-primary">Chest X-Ray</a>
+                                    <a href="/tools/dicom-viewer" class="btn btn-primary">CT Scan</a>
+                                    <hr>
+                                    <p><strong>External Sources</strong></p>
+                                    <a href="/tools/dicom-viewer" class="btn btn-default">Fetch from DICOM Server</a>
+                                    <a href="/tools/dicom-viewer" class="btn btn-default">Load from URL</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-md-3">
+                    <div class="dashboard-panel files_panel">
+                        <h3 class="dashboard-panel__headline">
+                            <a href="/files/">
+                                <small>Recent</small><br>
+                                Files
+                            </a>
+                        </h3>
+
+                        {% if recent_images %}
+                        <table class="table dashboard-table">
+                            <tbody>
+                                {% for image in recent_images %}
+                                <tr>
+                                    <td>
+                                        <a class="dashboard-recent-file" href="/api/images/{{ image.id }}/file">
+                                            <span class="text-muted file-path">media/uploads/</span><wbr>{{ image.filename }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted">
+                            <em>No files uploaded yet.</em>
+                        </p>
+                        {% endif %}
+
+                        <div class="dashboard-panel__buttons">
+                            <button type="button" id="id_open_file_modal" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#path_autocomplete_modal">
+                                <i class="bi bi-plus"></i>
+                                Open another file
+                            </button>
+                            <a href="/files/" class="btn btn-default">Browse files</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-md-3">
+                    <div class="dashboard-panel studies_panel">
+                        <h3 class="dashboard-panel__headline">
+                            <a href="/studies/">
+                                <small>Recent</small><br>
+                                Studies
+                            </a>
+                        </h3>
+
+                        {% if recent_studies %}
+                        <table class="table dashboard-table">
+                            <tbody>
+                                {% for study in recent_studies %}
+                                <tr>
+                                    <td>
+                                        <a href="/studies/{{ study.id }}/">
+                                            {{ study.patient.name }}
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">{{ study.study_type }} - 
+                                            <span class="study-status {{ study.status }}">{{ study.status }}</span>
+                                        </small>
+                                        <span class="image-count-badge">{{ study.image_count }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted">
+                            <em>No studies created yet.</em>
+                        </p>
+                        {% endif %}
+
+                        <div class="dashboard-panel__buttons">
+                            <a href="/studies/new" class="btn btn-primary">
+                                <i class="bi bi-plus"></i> New Study
+                            </a>
+                            <a href="/studies/" class="btn btn-default">View all</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-md-3">
+                    <div class="dashboard-panel analysis_panel">
+                        <h3 class="dashboard-panel__headline">
+                            <a href="/tools/">
+                                <small>Analysis</small><br>
+                                Tools
+                            </a>
+                        </h3>
+
+                        <table class="table dashboard-table">
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <a href="/tools/ai-report">
+                                            <i class="bi bi-robot"></i> AI Report Generator
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <a href="/tools/dicom-viewer">
+                                            <i class="bi bi-display"></i> DICOM Viewer
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <a href="/tools/enhance">
+                                            <i class="bi bi-sliders"></i> Image Enhancement
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <a href="/tools/measure">
+                                            <i class="bi bi-rulers"></i> Measurements
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="dashboard-panel__buttons">
+                            <a href="/tools/" class="btn btn-default">All Tools</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div class="modal fade" id="uploadImageModal" tabindex="-1" role="dialog" aria-labelledby="uploadImageModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h4 class="modal-title" id="uploadImageModalLabel">Upload Medical Image</h4>
+            </div>
+            <form action="/api/images/upload" method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="studySelect" class="form-label">Select Study</label>
+                        <select class="form-control" id="studySelect" name="study_id" required>
+                            <option value="">-- Select a Study --</option>
+                            {% for study in recent_studies %}
+                            <option value="{{ study.id }}">{{ study.patient.name }} - {{ study.study_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">Image File</label>
+                        <input type="file" class="form-control" id="imageFile" name="file" accept=".dcm,.jpg,.jpeg,.png,.tiff,.tif" required>
+                        <small class="text-muted">Allowed formats: DICOM, JPG, PNG, TIFF</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="path_autocomplete_modal" tabindex="-1" role="dialog" aria-labelledby="path_autocomplete_modal_label">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h4 class="modal-title" id="path_autocomplete_modal_label">Open or create a file</h4>
+            </div>
+            <div class="modal-body">
+                <p>Choose a path to an existing file to view, or enter a new file name.</p>
+                <div class="input-group">
+                    <input class="form-control" type="text" placeholder="/media/uploads/..." id="filePathInput">
+                    <span class="input-group-btn">
+                        <button class="btn btn-primary" type="button" id="openFileBtn" disabled>Open</button>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var fileInput = document.getElementById('filePathInput');
+    var openBtn = document.getElementById('openFileBtn');
+    
+    if (fileInput && openBtn) {
+        fileInput.addEventListener('input', function() {
+            openBtn.disabled = !this.value.trim();
+        });
+        
+        openBtn.addEventListener('click', function() {
+            var path = fileInput.value.trim();
+            if (path) {
+                window.location.href = '/api/images/file?path=' + encodeURIComponent(path);
+            }
+        });
+    }
+    
+    var uploadForm = document.getElementById('uploadForm');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            
+            fetch('/api/images/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    window.location.href = '/api/images/' + data.id + '/file';
+                } else {
+                    alert(data.message || 'Upload failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Upload failed');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

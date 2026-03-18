@@ -1,0 +1,50 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}Status - WhatsApp Clone{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; background: var(--bg-light); padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="background: white; border-radius: 10px; overflow: hidden;">
+            <div style="background: var(--primary); padding: 15px; color: white; display: flex; justify-content: space-between;">
+                <a href="{% url 'chat_list' %}" style="color: white; text-decoration: none;"><i class="fas fa-arrow-left"></i></a>
+                <h2>Status</h2>
+                <a href="{% url 'add_status' %}" style="color: white;"><i class="fas fa-plus"></i></a>
+            </div>
+            <div style="padding: 15px;">
+                {% for status in my_statuses %}
+                    <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
+                        <div class="status-ring" style="margin-right: 15px;">
+                            {% if status.media %}<img src="{{ status.media.url }}">{% else %}<i class="fas fa-user"></i>{% endif %}
+                        </div>
+                        <div>
+                            <div style="font-weight: 500;">My Status</div>
+                            <div style="font-size: 12px; color: var(--text-light);">{{ status.created_at|date:"H:i" }}</div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <a href="{% url 'add_status' %}" style="display: flex; align-items: center; padding: 10px; text-decoration: none; color: inherit;">
+                        <div class="status-ring add" style="margin-right: 15px;"><i class="fas fa-plus"></i></div>
+                        <div>Add Status</div>
+                    </a>
+                {% endfor %}
+                
+                <h4 style="margin: 20px 0 10px; color: var(--text-light);">Recent Updates</h4>
+                {% for item in contact_statuses %}
+                    <a href="{% url 'view_status' item.statuses.first.id %}" style="display: flex; align-items: center; padding: 10px; text-decoration: none; color: inherit;">
+                        <div class="status-ring" style="margin-right: 15px; border-color: var(--secondary);">
+                            {% if item.user.chat_profile.avatar %}<img src="{{ item.user.chat_profile.avatar.url }}">{% else %}{{ item.user.username.0|upper }}{% endif %}
+                        </div>
+                        <div>
+                            <div style="font-weight: 500;">{{ item.user.username }}</div>
+                            <div style="font-size: 12px; color: var(--text-light);">{{ item.unread_count }} new</div>
+                        </div>
+                    </a>
+                {% empty %}
+                    <p style="color: var(--text-light); text-align: center;">No status updates</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

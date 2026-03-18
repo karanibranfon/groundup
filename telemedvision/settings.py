@@ -18,6 +18,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
+APPEND_SLASH = True
+
 
 
 
@@ -28,7 +30,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'telemed',
+    'chat',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -112,3 +117,35 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 # Media files (uploads)
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+UPLOAD_FOLDER = BASE_DIR / 'media' / 'uploads'
+
+# Image processing quota (free tier)
+DAILY_IMAGE_QUOTA = 10
+QUOTA_RESET_HOUR = 0
+
+# Allowed file types
+ALLOWED_IMAGE_EXTENSIONS = {'dcm', 'jpg', 'jpeg', 'png', 'tiff', 'tif'}
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
+
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# Login URL
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'chat_list'
+LOGOUT_REDIRECT_URL = 'landing'
+
+# Channels
+ASGI_APPLICATION = 'telemedvision.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}

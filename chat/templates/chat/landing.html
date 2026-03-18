@@ -1,0 +1,17 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}Landing - WhatsApp Clone{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--primary);">
+    <div style="text-align: center; color: white;">
+        <i class="fab fa-whatsapp" style="font-size: 100px;"></i>
+        <h1 style="margin: 20px 0;">WhatsApp Clone</h1>
+        <p style="margin-bottom: 30px;">Connect with friends and family</p>
+        <div>
+            <a href="{% url 'login' %}" class="btn" style="background: white; color: var(--primary); margin-right: 10px; text-decoration: none;">Login</a>
+            <a href="{% url 'register' %}" class="btn btn-secondary" style="text-decoration: none;">Register</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

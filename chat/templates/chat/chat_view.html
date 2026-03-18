@@ -1,0 +1,379 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}{{ other_user.username }} - WhatsApp Clone{% endblock %}
+
+{% block content %}
+<div class="app-container">
+    <div class="sidebar hidden" id="sidebar">
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-arrow-left back-btn" onclick="showSidebar()"></i>
+                <div class="chat-avatar" style="width: 35px; height: 35px;">
+                    {% if user.chat_profile.avatar %}
+                        <img src="{{ user.chat_profile.avatar.url }}">
+                    {% else %}
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--secondary); color: white;">
+                            {{ user.username.0|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+                <span>{{ user.username }}</span>
+            </div>
+            <div class="header-actions">
+                <a href="#"><i class="fas fa-search"></i></a>
+                <a href="#"><i class="fas fa-ellipsis-v"></i></a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content" id="mainContent">
+        <div class="chat-header">
+            <i class="fas fa-arrow-left back-btn" onclick="showSidebar()"></i>
+            <div class="chat-avatar" style="width: 40px; height: 40px; margin-right: 15px;">
+                {% if other_user.chat_profile.avatar %}
+                    <img src="{{ other_user.chat_profile.avatar.url }}">
+                {% else %}
+                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #ccc; color: white; font-size: 18px;">
+                        {{ other_user.username.0|upper }}
+                    </div>
+                {% endif %}
+                {% if other_user.chat_profile.is_online %}
+                    <span class="online-indicator"></span>
+                {% endif %}
+            </div>
+            <div style="flex: 1;">
+                <h2>{{ other_user.username }}</h2>
+                <span style="font-size: 12px; opacity: 0.8;">
+                    {% if other_user.chat_profile.is_online %}
+                        online
+                    {% else %}
+                        last seen {{ other_user.chat_profile.last_seen|date:"H:i" }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'start_call' other_user.id 'video' %}" title="Video Call"><i class="fas fa-video"></i></a>
+                <a href="{% url 'start_call' other_user.id 'audio' %}" title="Voice Call"><i class="fas fa-phone"></i></a>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            {% for msg in messages %}
+                <div class="message {% if msg.sender == user %}sent{% else %}received{% endif %}" data-id="{{ msg.id }}" onclick="showMessageMenu(event, {{ msg.id }})">
+                    {% if msg.reply_to %}
+                        <div style="border-left: 3px solid var(--primary); padding-left: 8px; margin-bottom: 5px; font-size: 12px; opacity: 0.7;">
+                            {{ msg.reply_to.sender.username }}: {{ msg.reply_to.content|truncatechars:30 }}
+                        </div>
+                    {% endif %}
+                    
+                    {% if msg.message_type == 'image' %}
+                        {% if msg.attachments.first %}
+                            <img src="{{ msg.attachments.first.file.url }}" class="message-image" onclick="viewImage(this.src)">
+                        {% endif %}
+                    {% elif msg.message_type == 'audio' %}
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-play-circle" style="font-size: 24px; color: var(--primary);"></i>
+                            <audio controls style="height: 30px;">
+                                {% if msg.attachments.first %}
+                                    <source src="{{ msg.attachments.first.file.url }}">
+                                {% endif %}
+                            </audio>
+                        </div>
+                    {% elif msg.message_type == 'video' %}
+                        <video controls style="max-width: 250px; border-radius: 8px;">
+                            {% if msg.attachments.first %}
+                                <source src="{{ msg.attachments.first.file.url }}">
+                            {% endif %}
+                        </video>
+                    {% elif msg.message_type == 'document' %}
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(0,0,0,0.05); border-radius: 5px;">
+                            <i class="fas fa-file" style="font-size: 24px; color: var(--primary);"></i>
+                            <span>{{ msg.attachments.first.file_name|default:"Document" }}</span>
+                            <a href="{{ msg.attachments.first.file.url }}" download><i class="fas fa-download"></i></a>
+                        </div>
+                    {% else %}
+                        <div class="message-content">{{ msg.content }}</div>
+                    {% endif %}
+                    
+                    <div class="message-meta">
+                        {% if msg.reactions %}
+                            <span style="margin-right: 5px; background: #eee; padding: 2px 6px; border-radius: 10px; font-size: 12px;">{{ msg.reactions }}</span>
+                        {% endif %}
+                        <span>{{ msg.timestamp|date:"H:i" }}</span>
+                        {% if msg.sender == user %}
+                            <span class="message-status {% if msg.is_read %}read{% endif %}">
+                                {% if msg.is_read %}
+                                    <i class="fas fa-check-double"></i>
+                                {% else %}
+                                    <i class="fas fa-check"></i>
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <div id="typingIndicator" style="display: none;">
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-area">
+            <button onclick="showEmojiPicker()" title="Emoji"><i class="far fa-smile"></i></button>
+            <button onclick="document.getElementById('fileInput').click()" title="Attach"><i class="fas fa-paperclip"></i></button>
+            <input type="file" id="fileInput" style="display: none;" onchange="sendFile(this)">
+            <input type="text" id="messageInput" placeholder="Type a message" onkeypress="handleTyping(event)">
+            <button class="send-btn" onclick="sendMessage()" title="Send"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+const conversationId = {{ conversation.id }};
+const otherUserId = {{ other_user.id }};
+let ws;
+let typingTimeout;
+
+function connectWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat/`);
+    
+    ws.onopen = function() {
+        console.log('WebSocket connected');
+    };
+    
+    ws.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'new_message') {
+            if (data.message.sender_id !== {{ user.id }}) {
+                addMessageToChat(data.message);
+            }
+        } else if (data.type === 'typing') {
+            showTypingIndicator(data.is_typing);
+        } else if (data.type === 'read_receipt') {
+            updateReadReceipt(data.message_ids);
+        }
+    };
+    
+    ws.onclose = function() {
+        console.log('WebSocket disconnected');
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (content && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'chat_message',
+            conversation_id: conversationId,
+            content: content,
+            message_type: 'text'
+        }));
+        input.value = '';
+    }
+}
+
+function handleTyping(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+        return;
+    }
+    
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'typing',
+            conversation_id: conversationId,
+            is_typing: true
+        }));
+        
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            ws.send(JSON.stringify({
+                type: 'typing',
+                conversation_id: conversationId,
+                is_typing: false
+            }));
+        }, 2000);
+    }
+}
+
+function sendFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('content', '');
+    formData.append('message_type', file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document');
+    
+    fetch(`/chat/${conversationId}/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    }).then(() => {
+        location.reload();
+    });
+}
+
+function addMessageToChat(message) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'message received';
+    div.innerHTML = `
+        <div class="message-content">${message.content}</div>
+        <div class="message-meta">
+            <span>${new Date(message.timestamp).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</span>
+        </div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function showTypingIndicator(show) {
+    document.getElementById('typingIndicator').style.display = show ? 'block' : 'none';
+    if (show) {
+        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+    }
+}
+
+function showSidebar() {
+    document.getElementById('sidebar').classList.toggle('hidden');
+}
+
+let currentReplyMessage = null;
+
+function showMessageMenu(event, messageId) {
+    event.stopPropagation();
+    const existingMenu = document.getElementById('messageMenu');
+    if (existingMenu) existingMenu.remove();
+    
+    const menu = document.createElement('div');
+    menu.id = 'messageMenu';
+    menu.style.cssText = 'position: absolute; background: white; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; min-width: 150px;';
+    menu.innerHTML = `
+        <div style="padding: 8px; cursor: pointer;" onclick="replyMessage(${messageId})">
+            <i class="fas fa-reply"></i> Reply
+        </div>
+        <div style="padding: 8px; cursor: pointer;" onclick="forwardMessage(${messageId})">
+            <i class="fas fa-share"></i> Forward
+        </div>
+        <div style="padding: 8px; cursor: pointer;" onclick="showEmojiPickerForMessage(${messageId})">
+            <i class="fas fa-smile"></i> React
+        </div>
+        <div style="padding: 8px; cursor: pointer;" onclick="starMessage(${messageId})">
+            <i class="fas fa-star"></i> Star
+        </div>
+        <div style="padding: 8px; cursor: pointer; color: red;" onclick="deleteMessage(${messageId})">
+            <i class="fas fa-trash"></i> Delete
+        </div>
+    `;
+    
+    const msgElement = document.querySelector(`[data-id="${messageId}"]`);
+    if (msgElement) {
+        msgElement.style.position = 'relative';
+        msgElement.appendChild(menu);
+    }
+    
+    document.addEventListener('click', function closeMenu() {
+        if (document.getElementById('messageMenu')) {
+            document.getElementById('messageMenu').remove();
+        }
+        document.removeEventListener('click', closeMenu);
+    });
+}
+
+function replyMessage(messageId) {
+    currentReplyMessage = messageId;
+    document.getElementById('messageInput').placeholder = 'Reply to message...';
+    document.getElementById('messageInput').focus();
+}
+
+function forwardMessage(messageId) {
+    window.location.href = `/message/${messageId}/forward/`;
+}
+
+function starMessage(messageId) {
+    fetch(`/message/${messageId}/actions/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'action=star'
+    }).then(() => alert('Message starred!'));
+}
+
+function deleteMessage(messageId) {
+    const choice = prompt('Delete for me (1) or for everyone (2)?');
+    if (choice === '1') {
+        fetch(`/message/${messageId}/actions/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'action=delete_me'
+        }).then(() => location.reload());
+    } else if (choice === '2') {
+        fetch(`/message/${messageId}/actions/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'action=delete_everyone'
+        }).then(() => location.reload());
+    }
+}
+
+function showEmojiPickerForMessage(messageId) {
+    const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+    let picker = document.getElementById('emojiPicker');
+    if (picker) picker.remove();
+    
+    picker = document.createElement('div');
+    picker.id = 'emojiPicker';
+    picker.style.cssText = 'position: absolute; background: white; border-radius: 5px; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1001; display: flex; gap: 5px;';
+    
+    emojis.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.textContent = emoji;
+        btn.style.cssText = 'border: none; background: none; font-size: 20px; cursor: pointer;';
+        btn.onclick = () => addReaction(messageId, emoji);
+        picker.appendChild(btn);
+    });
+    
+    const msgElement = document.querySelector(`[data-id="${messageId}"]`);
+    if (msgElement) msgElement.appendChild(picker);
+}
+
+function addReaction(messageId, emoji) {
+    fetch(`/message/${messageId}/react/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `emoji=${encodeURIComponent(emoji)}`
+    }).then(() => location.reload());
+}
+
+function showEmojiPicker() {
+    const input = document.getElementById('messageInput');
+    input.value += '😊';
+    input.focus();
+}
+
+connectWebSocket();
+document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+</script>
+{% endblock %}

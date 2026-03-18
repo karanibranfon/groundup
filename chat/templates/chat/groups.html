@@ -1,0 +1,43 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}Groups - WhatsApp Clone{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; background: var(--bg-light); padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="background: white; border-radius: 10px; overflow: hidden;">
+            <div style="background: var(--primary); padding: 15px; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <a href="{% url 'chat_list' %}" style="color: white; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+                <h2>Groups</h2>
+                <a href="{% url 'create_group' %}" style="color: white; text-decoration: none;">
+                    <i class="fas fa-plus"></i> New Group
+                </a>
+            </div>
+            
+            <div style="padding: 15px;">
+                {% for group in groups %}
+                    <a href="{% url 'group_view' group.id %}" style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; text-decoration: none; color: inherit;">
+                        <div class="chat-avatar" style="width: 45px; height: 45px; margin-right: 15px;">
+                            {% if group.avatar %}
+                                <img src="{{ group.avatar.url }}">
+                            {% else %}
+                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--primary); color: white; font-size: 18px;">
+                                    {{ group.name.0|upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div style="font-weight: 500;">{{ group.name }}</div>
+                            <div style="font-size: 12px; color: var(--text-light);">{{ group.members.count }} members</div>
+                        </div>
+                    </a>
+                {% empty %}
+                    <p style="color: var(--text-light); text-align: center; padding: 20px;">No groups yet</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

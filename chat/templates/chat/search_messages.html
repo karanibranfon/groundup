@@ -1,0 +1,55 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}Search Messages{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; background: var(--bg-light); padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="background: white; border-radius: 10px; overflow: hidden;">
+            <div style="background: var(--primary); padding: 15px; color: white;">
+                <a href="{% url 'chat_list' %}" style="color: white; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+                <h2 style="margin-top: 10px;"><i class="fas fa-search"></i> Search Messages</h2>
+            </div>
+            
+            <div style="padding: 15px;">
+                <form method="get" style="margin-bottom: 20px;">
+                    <input type="text" name="q" value="{{ query }}" placeholder="Search messages..." 
+                           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px;">
+                </form>
+                
+                {% for msg in results %}
+                    <a href="{% url 'chat_view' msg.conversation.id %}" style="display: block; padding: 12px; border-bottom: 1px solid #eee; text-decoration: none; color: inherit;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-weight: 500;">{{ msg.sender.username }}</span>
+                            <span style="font-size: 12px; color: var(--text-light);">{{ msg.timestamp|date:"H:i" }}</span>
+                        </div>
+                        <div style="color: var(--text-dark);">
+                            {% if msg.message_type == 'image' %}
+                                <i class="fas fa-image"></i> Photo
+                            {% elif msg.message_type == 'audio' %}
+                                <i class="fas fa-microphone"></i> Voice
+                            {% else %}
+                                {{ msg.content|truncatechars:100 }}
+                            {% endif %}
+                        </div>
+                    </a>
+                {% empty %}
+                    {% if query %}
+                        <div style="text-align: center; padding: 40px; color: var(--text-light);">
+                            <i class="fas fa-search" style="font-size: 40px; margin-bottom: 15px;"></i>
+                            <p>No messages found for "{{ query }}"</p>
+                        </div>
+                    {% else %}
+                        <div style="text-align: center; padding: 40px; color: var(--text-light);">
+                            <i class="fas fa-search" style="font-size: 40px; margin-bottom: 15px;"></i>
+                            <p>Enter a search term</p>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

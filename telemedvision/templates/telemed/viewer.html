@@ -1,0 +1,758 @@
+{% extends "telemed/base.html" %}
+{% load static %}
+
+{% block title %}DICOM Viewer - TeleMed Vision{% endblock %}
+
+{% block extra_css %}
+<style>
+    * {
+        box-sizing: border-box;
+    }
+    
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #1a1a1a;
+    }
+    
+    .viewer-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background: #1a1a1a;
+    }
+    
+    .viewer-header {
+        background: #222;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #333;
+    }
+    
+    .viewer-header h3 {
+        margin: 0;
+        color: #fff;
+        font-size: 16px;
+    }
+    
+    .viewer-header .btn {
+        padding: 5px 15px;
+        font-size: 12px;
+    }
+    
+    .viewer-main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+    }
+    
+    .viewer-sidebar {
+        width: 280px;
+        background: #252525;
+        border-right: 1px solid #333;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .sidebar-section {
+        padding: 15px;
+        border-bottom: 1px solid #333;
+    }
+    
+    .sidebar-section h4 {
+        margin: 0 0 10px 0;
+        color: #fff;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .sidebar-section select,
+    .sidebar-section input {
+        width: 100%;
+        padding: 8px;
+        background: #333;
+        border: 1px solid #444;
+        color: #fff;
+        border-radius: 4px;
+        font-size: 13px;
+    }
+    
+    .series-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+    
+    .series-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #333;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .series-item:hover {
+        background: #333;
+    }
+    
+    .series-item.active {
+        background: #0066cc;
+    }
+    
+    .series-item .series-title {
+        color: #fff;
+        font-weight: 500;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+    
+    .series-item .series-info {
+        color: #888;
+        font-size: 11px;
+    }
+    
+    .viewer-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .viewer-canvas-container {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    #dicomCanvas {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .viewer-controls {
+        background: #222;
+        padding: 10px 20px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+        border-top: 1px solid #333;
+    }
+    
+    .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .control-group label {
+        color: #888;
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+    
+    .control-group .btn {
+        padding: 5px 10px;
+        font-size: 12px;
+        background: #333;
+        border: 1px solid #444;
+        color: #fff;
+    }
+    
+    .control-group .btn:hover {
+        background: #444;
+    }
+    
+    .control-group .btn.active {
+        background: #0066cc;
+        border-color: #0066cc;
+    }
+    
+    .control-group input[type="range"] {
+        width: 100px;
+        background: #333;
+    }
+    
+    .window-preset {
+        padding: 4px 10px;
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 3px;
+        color: #ccc;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .window-preset:hover {
+        background: #0066cc;
+        border-color: #0066cc;
+        color: #fff;
+    }
+    
+    .drop-zone {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 102, 204, 0.1);
+        border: 3px dashed #0066cc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+    
+    .drop-zone.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+    
+    .drop-zone-content {
+        text-align: center;
+        color: #fff;
+    }
+    
+    .drop-zone-content i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        color: #0066cc;
+    }
+    
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+    }
+    
+    .loading-overlay .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #333;
+        border-top-color: #0066cc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #666;
+    }
+    
+    .empty-state i {
+        font-size: 64px;
+        margin-bottom: 20px;
+    }
+    
+    .info-badge {
+        background: #333;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        color: #888;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="viewer-container">
+    <div class="viewer-header">
+        <h3>
+            <i class="bi bi-display"></i> 
+            DICOM Viewer
+            <span class="info-badge" id="imageInfo"></span>
+        </h3>
+        <div>
+            <a href="/dashboard" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <div class="viewer-main">
+        <div class="viewer-sidebar">
+            <div class="sidebar-section">
+                <h4>Load Image</h4>
+                <div class="mb-2">
+                    <label style="color: #888; font-size: 11px;">Study:</label>
+                    <select id="studySelect">
+                        <option value="">Select a study...</option>
+                        {% for study in studies %}
+                        <option value="{{ study.id }}">{{ study.patient.name }} - {{ study.study_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label style="color: #888; font-size: 11px;">Or load sample:</label>
+                    <button class="btn btn-primary btn-sm w-100" onclick="loadSampleImage()">
+                        <i class="bi bi-file-earmark-image"></i> Load Sample Knee MRI
+                    </button>
+                </div>
+                <div class="mb-2">
+                    <label style="color: #888; font-size: 11px;">Drop DICOM files here:</label>
+                    <input type="file" id="fileInput" accept=".dcm,.dicom" multiple style="display: none;">
+                    <button class="btn btn-secondary btn-sm w-100" onclick="document.getElementById('fileInput').click()">
+                        <i class="bi bi-folder2-open"></i> Browse Files
+                    </button>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h4>Window Presets</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                    <button class="window-preset" onclick="setWindowPreset(40, 400)">Soft Tissue</button>
+                    <button class="window-preset" onclick="setWindowPreset(0, 40)">Lung</button>
+                    <button class="window-preset" onclick="setWindowPreset(400, 1800)">Bone</button>
+                    <button class="window-preset" onclick="setWindowPreset(40, 80)">Liver</button>
+                    <button class="window-preset" onclick="setWindowPreset(100, 1000)">Brain</button>
+                    <button class="window-preset" onclick="setWindowPreset(500, 2000)">Lung Emphysema</button>
+                </div>
+            </div>
+            
+            <div class="sidebar-section series-list">
+                <h4>Series</h4>
+                <div id="seriesContainer">
+                    <p class="text-muted" style="color: #666; font-size: 12px;">
+                        Select a study or load sample data to view series.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="viewer-content">
+            <div class="viewer-canvas-container" id="canvasContainer">
+                <div class="empty-state" id="emptyState">
+                    <i class="bi bi-image"></i>
+                    <p>Select an image or drop DICOM files to view</p>
+                </div>
+                <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                    <div class="spinner"></div>
+                </div>
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-content">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <p style="font-size: 18px;">Drop DICOM files here</p>
+                    </div>
+                </div>
+                <canvas id="dicomCanvas"></canvas>
+            </div>
+            
+            <div class="viewer-controls">
+                <div class="control-group">
+                    <label>Zoom:</label>
+                    <button class="btn" onclick="adjustZoom(-0.25)">-</button>
+                    <span id="zoomValue" style="color: #fff; min-width: 50px; text-align: center; font-size: 12px;">100%</span>
+                    <button class="btn" onclick="adjustZoom(0.25)">+</button>
+                    <button class="btn" onclick="fitToWindow()">Fit</button>
+                </div>
+                
+                <div class="control-group">
+                    <label>Pan:</label>
+                    <button class="btn" onclick="pan(-20, 0)"><i class="bi bi-arrow-left"></i></button>
+                    <button class="btn" onclick="pan(20, 0)"><i class="bi bi-arrow-right"></i></button>
+                    <button class="btn" onclick="pan(0, -20)"><i class="bi bi-arrow-up"></i></button>
+                    <button class="btn" onclick="pan(0, 20)"><i class="bi bi-arrow-down"></i></button>
+                </div>
+                
+                <div class="control-group">
+                    <label>Rotate:</label>
+                    <button class="btn" onclick="rotate(-90)"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    <button class="btn" onclick="rotate(90)"><i class="bi bi-arrow-clockwise"></i></button>
+                </div>
+                
+                <div class="control-group">
+                    <label>W/L:</label>
+                    <input type="range" id="windowLevel" min="0" max="400" value="40" oninput="applyTransform()">
+                    <input type="range" id="windowWidth" min="1" max="2000" value="400" oninput="applyTransform()">
+                </div>
+                
+                <div class="control-group">
+                    <button class="btn" onclick="flipH()"><i class="bi bi-symmetry-vertical"></i> H</button>
+                    <button class="btn" onclick="flipV()"><i class="bi bi-symmetry-horizontal"></i> V</button>
+                    <button class="btn" onclick="invert()"><i class="bi bi-circle-half"></i></button>
+                </div>
+                
+                <div class="control-group">
+                    <button class="btn" onclick="resetView()"><i class="bi bi-arrow-repeat"></i> Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/pydicom@2.4.4/dist/dicom.min.js"></script>
+<script>
+    let cornerstone = null;
+    let cornerstoneTools = null;
+    let cornerstoneWADOImageLoader = null;
+    
+    let currentImage = null;
+    let imageIds = [];
+    let currentIndex = 0;
+    
+    let zoom = 1;
+    let rotation = 0;
+    let panX = 0, panY = 0;
+    let flipH = false, flipV = false;
+    let inverted = false;
+    
+    const studies = [
+        {% for study in studies %}
+        { id: '{{ study.id }}', name: '{{ study.patient.name }}', type: '{{ study.study_type }}' },
+        {% endfor %}
+    ];
+    
+    document.getElementById('studySelect').addEventListener('change', function() {
+        const studyId = this.value;
+        if (!studyId) return;
+        
+        showLoading();
+        
+        fetch(`/api/studies/${studyId}/images`)
+            .then(r => r.json())
+            .then(data => {
+                displaySeries(data.images);
+                hideLoading();
+            })
+            .catch(err => {
+                console.error('Error loading study:', err);
+                hideLoading();
+            });
+    });
+    
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (files.length > 0) {
+            loadFiles(files);
+        }
+    });
+    
+    const dropZone = document.getElementById('dropZone');
+    const canvasContainer = document.getElementById('canvasContainer');
+    
+    canvasContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('active');
+    });
+    
+    canvasContainer.addEventListener('dragleave', () => {
+        dropZone.classList.remove('active');
+    });
+    
+    canvasContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('active');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            loadFiles(files);
+        }
+    });
+    
+    function displaySeries(images) {
+        const container = document.getElementById('seriesContainer');
+        
+        if (!images || images.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="color: #666; font-size: 12px;">No images in this study</p>';
+            return;
+        }
+        
+        container.innerHTML = images.map((img, i) => `
+            <div class="series-item" onclick="loadImageFromList('${img.id}', '${img.original_filename}')">
+                <div class="series-title">${img.original_filename}</div>
+                <div class="series-info">Image ${i + 1} of ${images.length}</div>
+            </div>
+        `).join('');
+        
+        if (images.length > 0) {
+            loadImageFromList(images[0].id, images[0].original_filename);
+        }
+    }
+    
+    function loadImageFromList(id, filename) {
+        document.querySelectorAll('.series-item').forEach(el => el.classList.remove('active'));
+        event.target.closest('.series-item').classList.add('active');
+        
+        showLoading();
+        document.getElementById('emptyState').style.display = 'none';
+        
+        fetch(`/api/images/${id}/file`)
+            .then(r => r.blob())
+            .then(blob => {
+                const file = new File([blob], filename, { type: 'application/dicom' });
+                loadDicomFile(file);
+            })
+            .catch(err => {
+                console.error('Error loading image:', err);
+                hideLoading();
+                alert('Error loading image. Please try another.');
+            });
+    }
+    
+    function loadSampleImage() {
+        showLoading();
+        document.getElementById('emptyState').style.display = 'none';
+        
+        const samplePath = '/static/images/samples/sample-knee-mri1/02ef8f31ea86a45cfce6eb297c274598/series-000001/image-000001.dcm';
+        
+        fetch(samplePath)
+            .then(r => {
+                if (!r.ok) throw new Error('Sample not found');
+                return r.arrayBuffer();
+            })
+            .then(buffer => {
+                const file = new File([buffer], 'sample-knee-mri.dcm', { type: 'application/dicom' });
+                loadDicomFile(file);
+            })
+            .catch(err => {
+                console.error('Error loading sample:', err);
+                hideLoading();
+                alert('Sample DICOM file not found. Please upload a DICOM file.');
+            });
+    }
+    
+    function loadFiles(files) {
+        showLoading();
+        document.getElementById('emptyState').style.display = 'none';
+        
+        const dicomFiles = Array.from(files).filter(f => 
+            f.name.endsWith('.dcm') || f.name.endsWith('.dicom')
+        );
+        
+        if (dicomFiles.length === 0) {
+            alert('No DICOM files found. Please select .dcm files.');
+            hideLoading();
+            return;
+        }
+        
+        loadDicomFile(dicomFiles[0]);
+    }
+    
+    function loadDicomFile(file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const byteArray = new Uint8Array(e.target.result);
+                const dataSet = dicom.parseDicom(byteArray);
+                
+                renderDicomImage(dataSet);
+                hideLoading();
+                
+                document.getElementById('imageInfo').textContent = 
+                    `${dataSet.string('x00081030') || 'Unknown Study'} - ${dataSet.string('x00080060') || 'Unknown Modality'}`;
+                
+            } catch (err) {
+                console.error('Error parsing DICOM:', err);
+                hideLoading();
+                alert('Error parsing DICOM file. Make sure it is a valid DICOM file.');
+            }
+        };
+        
+        reader.readAsArrayBuffer(file);
+    }
+    
+    function renderDicomImage(dataSet) {
+        const canvas = document.getElementById('dicomCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const pixelData = dataSet.elements.x7fe00010;
+        if (!pixelData) {
+            alert('No pixel data found in this DICOM file.');
+            hideLoading();
+            return;
+        }
+        
+        const width = dataSet.uint16('x00280011');
+        const height = dataSet.uint16('x00280010');
+        const bitsAllocated = dataSet.uint16('x00280100');
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const intercept = dataSet.floatString('x00281052') || 0;
+        const slope = dataSet.floatString('x00281053') || 1;
+        
+        const windowCenter = parseFloat(document.getElementById('windowLevel').value) || 40;
+        const windowWidth = parseFloat(document.getElementById('windowWidth').value) || 400;
+        
+        const minValue = windowCenter - windowWidth / 2;
+        const maxValue = windowCenter + windowWidth / 2;
+        
+        const pixelElement = dataSet.elements.x7fe00010;
+        const pixelDataArray = new Uint8Array(pixelData.length);
+        
+        const buffer = dataSet.byteArray.buffer;
+        const offset = pixelElement.dataOffset;
+        
+        let imageData;
+        if (bitsAllocated === 16) {
+            const uint16Array = new Uint16Array(buffer, offset, pixelData.length / 2);
+            imageData = ctx.createImageData(width, height);
+            
+            for (let i = 0; i < uint16Array.length; i++) {
+                let value = uint16Array[i] * slope + intercept;
+                value = (value - minValue) / (maxValue - minValue);
+                value = Math.max(0, Math.min(1, value)) * 255;
+                imageData.data[i * 4] = value;
+                imageData.data[i * 4 + 1] = value;
+                imageData.data[i * 4 + 2] = value;
+                imageData.data[i * 4 + 3] = 255;
+            }
+        } else if (bitsAllocated === 8) {
+            const uint8Array = new Uint8Array(buffer, offset, pixelData.length);
+            imageData = ctx.createImageData(width, height);
+            
+            for (let i = 0; i < uint8Array.length; i++) {
+                let value = uint8Array[i] * slope + intercept;
+                value = (value - minValue) / (maxValue - minValue);
+                value = Math.max(0, Math.min(1, value)) * 255;
+                imageData.data[i * 4] = value;
+                imageData.data[i * 4 + 1] = value;
+                imageData.data[i * 4 + 2] = value;
+                imageData.data[i * 4 + 3] = 255;
+            }
+        }
+        
+        currentImage = {
+            imageData: imageData,
+            width: width,
+            height: height
+        };
+        
+        applyTransform();
+    }
+    
+    function applyTransform() {
+        if (!currentImage) return;
+        
+        const canvas = document.getElementById('dicomCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = currentImage.width;
+        tempCanvas.height = currentImage.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(currentImage.imageData, 0, 0);
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 150;
+        
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.translate(canvas.width / 2 + panX, canvas.height / 2 + panY);
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.scale(zoom * (flipH ? -1 : 1), zoom * (flipV ? -1 : 1));
+        
+        if (inverted) {
+            ctx.filter = 'invert(100%)';
+        }
+        
+        ctx.drawImage(tempCanvas, -tempCanvas.width / 2, -tempCanvas.height / 2);
+        
+        ctx.filter = 'none';
+        ctx.restore();
+    }
+    
+    function adjustZoom(delta) {
+        zoom = Math.max(0.1, Math.min(10, zoom + delta));
+        document.getElementById('zoomValue').textContent = `${Math.round(zoom * 100)}%`;
+        applyTransform();
+    }
+    
+    function fitToWindow() {
+        const canvas = document.getElementById('dicomCanvas');
+        const scaleX = canvas.width / currentImage.width;
+        const scaleY = (canvas.height) / currentImage.height;
+        zoom = Math.min(scaleX, scaleY) * 0.9;
+        document.getElementById('zoomValue').textContent = `${Math.round(zoom * 100)}%`;
+        applyTransform();
+    }
+    
+    function pan(dx, dy) {
+        panX += dx;
+        panY += dy;
+        applyTransform();
+    }
+    
+    function rotate(deg) {
+        rotation = (rotation + deg) % 360;
+        applyTransform();
+    }
+    
+    function flipH() {
+        flipH = !flipH;
+        applyTransform();
+    }
+    
+    function flipV() {
+        flipV = !flipV;
+        applyTransform();
+    }
+    
+    function invert() {
+        inverted = !inverted;
+        applyTransform();
+    }
+    
+    function resetView() {
+        zoom = 1;
+        rotation = 0;
+        panX = 0;
+        panY = 0;
+        flipH = false;
+        flipV = false;
+        inverted = false;
+        
+        document.getElementById('zoomValue').textContent = '100%';
+        document.getElementById('windowLevel').value = 40;
+        document.getElementById('windowWidth').value = 400;
+        
+        fitToWindow();
+    }
+    
+    function setWindowPreset(level, width) {
+        document.getElementById('windowLevel').value = level;
+        document.getElementById('windowWidth').value = width;
+        applyTransform();
+    }
+    
+    function showLoading() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+    
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+    
+    window.addEventListener('resize', () => {
+        if (currentImage) {
+            applyTransform();
+        }
+    });
+</script>
+{% endblock %}

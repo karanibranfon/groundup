@@ -1,0 +1,50 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}Starred Messages{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; background: var(--bg-light); padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="background: white; border-radius: 10px; overflow: hidden;">
+            <div style="background: var(--primary); padding: 15px; color: white;">
+                <a href="{% url 'chat_list' %}" style="color: white; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+                <h2 style="margin-top: 10px;"><i class="fas fa-star"></i> Starred Messages</h2>
+            </div>
+            
+            <div style="padding: 15px;">
+                {% for item in starred %}
+                    {% with item.message as msg %}
+                    <div style="padding: 12px; border-bottom: 1px solid #eee; background: var(--message-sent); border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 500;">{{ msg.sender.username }}</span>
+                            <span style="font-size: 12px; color: var(--text-light);">{{ msg.timestamp|date:"H:i" }}</span>
+                        </div>
+                        <div>{{ msg.content }}</div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <a href="{% url 'chat_view' msg.conversation.id %}" style="color: var(--primary); text-decoration: none; font-size: 12px;">
+                                <i class="fas fa-reply"></i> Reply
+                            </a>
+                            <form method="post" action="{% url 'message_actions' msg.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="unstar">
+                                <button type="submit" style="background: none; border: none; color: var(--text-light); cursor: pointer; font-size: 12px;">
+                                    <i class="fas fa-star"></i> Unstar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endwith %}
+                {% empty %}
+                    <div style="text-align: center; padding: 40px; color: var(--text-light);">
+                        <i class="fas fa-star" style="font-size: 40px; margin-bottom: 15px;"></i>
+                        <p>No starred messages</p>
+                        <p style="font-size: 12px;">Star messages to find them easily later</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

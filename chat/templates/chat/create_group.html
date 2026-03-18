@@ -1,0 +1,65 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}Create Group{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; background: var(--bg-light); padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="background: white; border-radius: 10px; overflow: hidden;">
+            <div style="background: var(--primary); padding: 15px; color: white;">
+                <a href="{% url 'groups_list' %}" style="color: white; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+                <h2 style="margin-top: 10px;">Create Group</h2>
+            </div>
+            
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div style="padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto; background: #eee; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;" onclick="document.getElementById('avatarInput').click()">
+                            <i class="fas fa-camera" style="font-size: 30px; color: #999;"></i>
+                            <input type="file" id="avatarInput" name="avatar" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Group Name</label>
+                        <input type="text" name="name" required placeholder="Enter group name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description (optional)</label>
+                        <textarea name="description" placeholder="Group description" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Add Participants</label>
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
+                            {% for contact in contacts %}
+                                <label style="display: flex; align-items: center; padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;">
+                                    <input type="checkbox" name="members" value="{{ contact.user.id }}" style="margin-right: 10px;">
+                                    <div class="chat-avatar" style="width: 35px; height: 35px; margin-right: 10px;">
+                                        {% if contact.user.chat_profile.avatar %}
+                                            <img src="{{ contact.user.chat_profile.avatar.url }}">
+                                        {% else %}
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--secondary); color: white; font-size: 14px;">
+                                                {{ contact.user.username.0|upper }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <span>{{ contact.user.username }}</span>
+                                </label>
+                            {% empty %}
+                                <p style="padding: 20px; text-align: center; color: #999;">No contacts found</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Create Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "telemed/base.html" %}
+{% load static %}
+
+{% block title %}Analysis Tools - TeleMed Vision{% endblock %}
+
+{% block content %}
+<main>
+    <div class="container" style="padding-top: 20px;">
+        <div class="page-header">
+            <h1>
+                <span>Analysis Tools</span>
+                <small>Medical image analysis and processing</small>
+            </h1>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-robot" style="font-size: 48px; color: #139FD7;"></i>
+                        <h5 class="card-title mt-3">AI Report Generator</h5>
+                        <p class="card-text text-muted">Generate automated analysis reports for medical imaging studies using AI.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/tools/ai-report" class="btn btn-primary w-100">Open Tool</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-display" style="font-size: 48px; color: #139FD7;"></i>
+                        <h5 class="card-title mt-3">DICOM Viewer</h5>
+                        <p class="card-text text-muted">View and navigate through DICOM images with advanced controls.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/tools/dicom-viewer" class="btn btn-primary w-100">Open Tool</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-sliders" style="font-size: 48px; color: #139FD7;"></i>
+                        <h5 class="card-title mt-3">Image Enhancement</h5>
+                        <p class="card-text text-muted">Adjust brightness, contrast, and apply filters to improve image quality.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/tools/enhance" class="btn btn-primary w-100">Open Tool</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-rulers" style="font-size: 48px; color: #139FD7;"></i>
+                        <h5 class="card-title mt-3">Measurements</h5>
+                        <p class="card-text text-muted">Take measurements on medical images including distances and angles.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/tools/measure" class="btn btn-primary w-100">Open Tool</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-md-12">
+                <h3>Recent Analyses</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Study</th>
+                                <th>Analysis Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>{{ log.processed_at|date:"Y-m-d H:i" }}</td>
+                                <td>{{ log.image.study.patient.name }} - {{ log.image.study.study_type }}</td>
+                                <td>{{ log.get_action_type_display }}</td>
+                                <td><span class="badge bg-success">Complete</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-default" onclick="viewAnalysis('{{ log.id }}')">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    No recent analyses. Run an analysis to see results here.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
