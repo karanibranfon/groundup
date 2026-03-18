@@ -87,6 +87,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             }
         )
+        
+        await self.channel_layer.group_send(
+            f"chat_{self.user.id}",
+            {
+                'type': 'new_message',
+                'message': {
+                    'id': message['id'],
+                    'content': message['content'],
+                    'message_type': message['message_type'],
+                    'sender_id': self.user.id,
+                    'sender_username': self.user.username,
+                    'timestamp': message['timestamp'],
+                }
+            }
+        )
 
     async def handle_typing(self, data):
         conversation_id = data.get('conversation_id')

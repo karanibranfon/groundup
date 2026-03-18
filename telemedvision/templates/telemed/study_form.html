@@ -1,0 +1,38 @@
+{% extends 'telemed/base.html' %}
+
+{% block title %}New Study - TeleMed Vision{% endblock %}
+
+{% block content %}
+<main>
+    <div class="container" style="padding-top: 40px; padding-bottom: 40px;">
+        <h1>Create New Study</h1>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <form method="POST" action="/api/studies">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="study_type" class="form-label">Study Type</label>
+                        <input type="text" class="form-control" id="study_type" name="study_type" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="patient_id" class="form-label">Patient</label>
+                        <select class="form-control" id="patient_id" name="patient_id">
+                            <option value="">Select a patient...</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Study</button>
+                    <a href="/studies/" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -45,6 +45,47 @@ def privacy(request):
     return render(request, 'telemed/privacy.html')
 
 
+def whats_included(request):
+    return render(request, 'telemed/whats_included.html')
+
+
+def company_info(request):
+    return render(request, 'telemed/company_info.html')
+
+
+def media(request):
+    return render(request, 'telemed/media.html')
+
+
+def jobs(request):
+    return render(request, 'telemed/jobs.html')
+
+
+@login_required
+def account_view(request):
+    user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    context = {
+        'user': request.user,
+        'profile': user_profile,
+    }
+    return render(request, 'telemed/account.html', context)
+
+
+@login_required
+def files_view(request):
+    user_images = Image.objects.filter(created_by=request.user).order_by('-created_at')
+    context = {
+        'files': user_images,
+    }
+    return render(request, 'telemed/files.html', context)
+
+
+@login_required
+def studies_new(request):
+    context = {}
+    return render(request, 'telemed/study_form.html', context)
+
+
 @login_required
 def dashboard(request):
     user_profile, _ = UserProfile.objects.get_or_create(user=request.user)

@@ -11,6 +11,9 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     
+    # Root URL - landing page and main app routes
+    path('', include('telemed.urls')),
+    
     # Unified authentication URLs (at root level)
     path('login/', auth_views.LoginView.as_view(template_name='telemed/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
@@ -19,9 +22,6 @@ urlpatterns = [
     # JWT Token URLs
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # Telemed app routes
-    path('app/', include('telemed.urls')),
     
     # Chat app routes
     path('chat/', include('chat.urls')),

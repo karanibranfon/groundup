@@ -1,0 +1,39 @@
+{% extends 'telemed/base.html' %}
+
+{% block title %}Account Settings - TeleMed Vision{% endblock %}
+
+{% block content %}
+<main>
+    <div class="container" style="padding-top: 40px; padding-bottom: 40px;">
+        <h1>Account Settings</h1>
+        
+        <div class="row mt-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Profile Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Username:</strong> {{ user.username }}</p>
+                        <p><strong>Email:</strong> {{ user.email }}</p>
+                        <p><strong>Account Type:</strong> {{ profile.account_type }}</p>
+                        <p><strong>Member Since:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+                        <a href="{% url 'logout' %}" class="btn btn-primary">Edit Profile</a>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>Usage Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Daily Quota Used:</strong> {{ profile.daily_quota_used }} / {{ profile.quota_limit|default:50 }}</p>
+                        <p><strong>Images Today:</strong> {{ profile.daily_quota_used }}</p>
+                        <a href="/pricing" class="btn btn-success">Upgrade Plan</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

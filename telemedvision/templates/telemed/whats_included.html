@@ -1,0 +1,47 @@
+{% extends 'telemed/base.html' %}
+
+{% block title %}What's Included - TeleMed Vision{% endblock %}
+
+{% block content %}
+<main>
+    <div class="container" style="padding-top: 40px; padding-bottom: 40px;">
+        <h1>What's Included in TeleMed Vision</h1>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h2>Free Account Features</h2>
+                <ul>
+                    <li>Full medical image viewing environment</li>
+                    <li>Upload and view X-rays, CT scans, MRIs, ECGs and more</li>
+                    <li>Secure storage for your medical images</li>
+                    <li>Session state preservation - continue from where you left off</li>
+                    <li>Access from any device with a web browser</li>
+                    <li>Basic DICOM viewer functionality</li>
+                    <li>Share images securely with healthcare providers</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h2>Premium Features (Paid Plans)</h2>
+                <ul>
+                    <li>Increased storage limits (up to 100 images/day)</li>
+                    <li>AI-powered report generation</li>
+                    <li>Advanced image enhancement tools</li>
+                    <li>Measurement tools for clinical analysis</li>
+                    <li>Priority support</li>
+                    <li>Bulk image sharing</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <a href="/pricing" class="btn btn-primary btn-lg">View Pricing</a>
+                <a href="/signup" class="btn btn-outline-primary btn-lg">Sign Up Free</a>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
