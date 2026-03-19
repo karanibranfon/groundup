@@ -1,0 +1,95 @@
+{% extends 'telemed/base.html' %}
+{% load static %}
+
+{% block title %}Healthcare Blog | TeleMedVision{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Healthcare Blog</h1>
+        {% if user.is_authenticated %}
+        <a href="{% url 'blog:blog_create' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            Write New Post
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div class="lg:col-span-3">
+            {% if posts %}
+            <div class="space-y-6">
+                {% for post in posts %}
+                <article class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                            {% if post.category %}
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">{{ post.category.name }}</span>
+                            {% endif %}
+                            {% if post.is_ai_generated %}
+                            <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">AI Generated</span>
+                            {% endif %}
+                            <span>{{ post.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        <h2 class="text-xl font-semibold mb-2">
+                            <a href="{% url 'blog:post_detail' post.slug %}" class="text-gray-900 hover:text-blue-600">
+                                {{ post.title }}
+                            </a>
+                        </h2>
+                        <p class="text-gray-600 mb-4">{{ post.excerpt|truncatewords:30 }}</p>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-gray-600">{{ post.author.username }}</span>
+                                {% if post.tags.exists %}
+                                <div class="flex gap-1">
+                                    {% for tag in post.tags.all|slice:":3" %}
+                                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <a href="{% url 'blog:post_detail' post.slug %}" class="text-blue-600 text-sm hover:underline">Read more</a>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <p class="text-gray-500 text-lg">No blog posts yet. Be the first to write!</p>
+                {% if user.is_authenticated %}
+                <a href="{% url 'blog:blog_create' %}" class="inline-block mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    Create Your First Post
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <aside class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+                <h3 class="font-semibold mb-4">Categories</h3>
+                <ul class="space-y-2">
+                    {% for category in categories %}
+                    <li>
+                        <a href="?category={{ category.slug }}" class="text-gray-600 hover:text-blue-600 block">
+                            {{ category.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-semibold mb-4">Popular Tags</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for tag in tags %}
+                    <a href="?tag={{ tag.slug }}" class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full hover:bg-blue-100 hover:text-blue-700">
+                        {{ tag.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

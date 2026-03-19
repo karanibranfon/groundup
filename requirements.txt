@@ -4,3 +4,15 @@ djangorestframework-simplejwt==5.5.0
 channels==4.3.2
 pillow==12.1.1
 pydicom==3.0.1
+
+# AI/LLM providers
+anthropic==0.86.0
+langchain==1.2.12
+langchain-anthropic==1.4.0
+langchain-core==1.2.20
+langchain-google-genai==4.2.1
+langchain-ollama==1.0.1
+langchain-openai==1.1.11
+ollama==0.6.1
+openai==2.29.0
+python-dotenv==1.2.2
