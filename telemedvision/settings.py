@@ -3,6 +3,7 @@ Django settings for telemedvision.
 co authored by open code
 """
 
+import os
 from pathlib import Path
 
 # Build paths.
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
     'telemed',
     'chat',
     'channels',
+    'blog',
 ]
 
 MIDDLEWARE = [
@@ -114,6 +116,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (uploads)
 MEDIA_URL = '/media/'
@@ -168,3 +171,12 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer'
     }
 }
+
+# LLM Configuration for AI Blog Writing
+LLM_PROVIDER = 'openai'
+OPENAI_MODEL = 'gpt-4o'
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+OLLAMA_BASE_URL = 'http://localhost:11434'
+OLLAMA_MODEL = 'llama3'
