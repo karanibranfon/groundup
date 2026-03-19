@@ -3,6 +3,11 @@
 
 {% block title %}AI Report Generator - TeleMed Vision{% endblock %}
 
+{% block extra_js_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+{% endblock %}
+
 {% block extra_css %}
 <style>
 .report-container {
@@ -276,7 +281,39 @@ function printReport() {
 }
 
 function downloadReport() {
-    alert('PDF download coming soon!');
+    const { jsPDF } = window.jspdf;
+    const reportContent = document.getElementById('reportContent');
+    
+    html2canvas(reportContent, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+    }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+        
+        while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= 297;
+        }
+        
+        const studyId = document.getElementById('reportStudy').value;
+        const timestamp = new Date().toISOString().slice(0, 10);
+        pdf.save(`ai_report_${studyId}_${timestamp}.pdf`);
+    }).catch(err => {
+        console.error('PDF generation failed:', err);
+        window.print();
+    });
 }
 </script>
 {% endblock %}

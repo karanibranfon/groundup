@@ -55,10 +55,15 @@ class Conversation(models.Model):
     is_muted = models.BooleanField(default=False)
     is_archived = models.BooleanField(default=False)
     wallpaper = models.ImageField(upload_to=upload_to, blank=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['-updated_at']),
+        ]
 
     def __str__(self):
         return f"Conversation {self.id}"
-
+    
     def other_participant(self, user):
         return self.participants.exclude(id=user.id).first()
 
@@ -89,6 +94,10 @@ class Message(models.Model):
 
     class Meta:
         ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['conversation', '-timestamp']),
+            models.Index(fields=['sender', '-timestamp']),
+        ]
 
     def __str__(self):
         return f"Message {self.id} from {self.sender.username}"

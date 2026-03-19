@@ -11,6 +11,8 @@ from .models import (
     Group, GroupMessage, Status, StatusReply, CallLog, StarredMessage
 )
 import json
+import hmac
+import hashlib
 
 
 def landing(request):
@@ -79,7 +81,8 @@ def two_step_verify(request):
     
     if request.method == 'POST':
         pin = request.POST.get('pin')
-        if user.chat_profile.two_step_pin == pin:
+        stored_pin = user.chat_profile.two_step_pin
+        if stored_pin and hmac.compare_digest(stored_pin, pin):
             login(request, user)
             del request.session['pre_2fa_user_id']
             return redirect('chat_list')
@@ -205,7 +208,7 @@ def search_users(request):
         users = User.objects.filter(
             Q(username__icontains=query) | 
             Q(email__icontains=query) |
-            Q(profile__phone__icontains=query)
+            Q(chat_profile__phone__icontains=query)
         ).exclude(id=request.user.id)[:20]
     
     return render(request, 'chat/search_users.html', {'users': users, 'query': query})
@@ -517,11 +520,16 @@ def search_messages(request):
     results = []
     
     if query:
+        try:
+            limit = min(int(request.GET.get('limit', 50)), 100)
+        except (ValueError, TypeError):
+            limit = 50
+        
         my_messages = Message.objects.filter(
             Q(content__icontains=query),
             conversation__participants=request.user,
             is_deleted_for_everyone=False
-        ).select_related('conversation', 'sender')[:50]
+        ).select_related('conversation', 'sender')[:limit]
         
         results = my_messages
     
@@ -643,11 +651,14 @@ def mark_offline(request):
 def api_get_conversations(request):
     conversations = Conversation.objects.filter(
         participants=request.user
+    ).prefetch_related(
+        'participants', 'last_message'
     ).order_by('-updated_at')
     
     data = []
     for conv in conversations:
         other = conv.participants.exclude(id=request.user.id).first()
+        unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
         data.append({
             'id': conv.id,
             'other_user': {
@@ -662,7 +673,7 @@ def api_get_conversations(request):
             },
             'is_pinned': conv.is_pinned,
             'is_muted': conv.is_muted,
-            'unread_count': conv.messages.filter(is_read=False).exclude(sender=request.user).count()
+            'unread_count': unread_count
         })
     
     return JsonResponse({'conversations': data})

@@ -5,19 +5,22 @@ co authored by open code
 
 import os
 from pathlib import Path
+import environ
 
-# Build paths.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env()
 
-# Quick-start development settings - unsuitable for production
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%_u0be9o*w&q72hiawkvy@p#mwjb*z_%%z2@o23ebh406oghi0'
+try:
+    environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+except FileNotFoundError:
+    pass
 
-# SECURITY WARNING: don't run with debug turned on in production!- comment by opencode
-DEBUG = False
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-me-in-production')
 
-ALLOWED_HOSTS = ['kaparo.pythonanywhere.com', 'localhost', '127.0.0.1']
+DEBUG = env.bool('DEBUG', default=False)
+
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 APPEND_SLASH = True
 
@@ -47,6 +50,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'telemedvision.middleware.RateLimitMiddleware',
+    'telemedvision.middleware.HealthCheckMiddleware',
 ]
 
 ROOT_URLCONF = 'telemedvision.urls'
@@ -168,15 +173,23 @@ DEFAULT_FROM_EMAIL = 'noreply@telemedvision.com'
 ASGI_APPLICATION = 'telemedvision.asgi.application'
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [env('REDIS_URL', default='redis://localhost:6379')],
+        },
     }
 }
 
 # LLM Configuration for AI Blog Writing
-LLM_PROVIDER = 'openai'
-OPENAI_MODEL = 'gpt-4o'
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
-ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
-OLLAMA_BASE_URL = 'http://localhost:11434'
-OLLAMA_MODEL = 'llama3'
+LLM_PROVIDER = env('LLM_PROVIDER', default='openai')
+OPENAI_MODEL = env('OPENAI_MODEL', default='gpt-4o')
+OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
+ANTHROPIC_MODEL = env('ANTHROPIC_MODEL', default='claude-sonnet-4-20250514')
+ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY', default='')
+OLLAMA_BASE_URL = env('OLLAMA_BASE_URL', default='http://localhost:11434')
+OLLAMA_MODEL = env('OLLAMA_MODEL', default='llama3')
+
+# Rate limiting settings
+RATE_LIMIT_ENABLED = env.bool('RATE_LIMIT_ENABLED', default=True)
+RATE_LIMIT_PER_MINUTE = env.int('RATE_LIMIT_PER_MINUTE', default=60)
+RATE_LIMIT_PER_HOUR = env.int('RATE_LIMIT_PER_HOUR', default=1000)

@@ -5,12 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
-from django.utils import timezone
 from django.core.paginator import Paginator
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import UserProfile, Patient, Study, Image, ImageProcessingLog, Feedback
+from .models import UserProfile, Patient, Study, Image, ImageProcessingLog
 
 
 def index(request):
@@ -73,7 +72,9 @@ def account_view(request):
 
 @login_required
 def files_view(request):
-    user_images = Image.objects.filter(created_by=request.user).order_by('-created_at')
+    user_images = Image.objects.filter(
+        created_by=request.user
+    ).select_related('study', 'patient').order_by('-created_at')
     context = {
         'files': user_images,
     }
@@ -91,8 +92,12 @@ def dashboard(request):
     user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
     user_profile.check_and_reset_quota()
     
-    recent_images = Image.objects.filter(created_by=request.user)[:5]
-    recent_studies = Study.objects.filter(created_by=request.user)[:5]
+    recent_images = Image.objects.filter(
+        created_by=request.user
+    ).select_related('study', 'patient')[:5]
+    recent_studies = Study.objects.filter(
+        created_by=request.user
+    ).select_related('patient')[:5]
     
     context = {
         'username': request.user.username,
@@ -476,9 +481,19 @@ def get_image_file(request, image_id):
         user_agent=request.META.get('HTTP_USER_AGENT', ''),
     )
     
-    file_path = os.path.join(settings.UPLOAD_FOLDER, image.filename)
-    if os.path.exists(file_path):
-        return FileResponse(open(file_path, 'rb'), as_attachment=False, filename=image.original_filename)
+    safe_filename = os.path.basename(image.filename)
+    if safe_filename != image.filename:
+        return Response({'message': 'Invalid filename'}, status=400)
+    
+    file_path = os.path.join(settings.UPLOAD_FOLDER, safe_filename)
+    resolved_path = os.path.realpath(file_path)
+    upload_folder_real = os.path.realpath(settings.UPLOAD_FOLDER)
+    
+    if not resolved_path.startswith(upload_folder_real + os.sep):
+        return Response({'message': 'Access denied'}, status=403)
+    
+    if os.path.exists(resolved_path) and os.path.isfile(resolved_path):
+        return FileResponse(open(resolved_path, 'rb'), as_attachment=False, filename=image.original_filename)
     return Response({'message': 'Image file not found'}, status=404)
 
 
@@ -510,7 +525,9 @@ def recent_images(request):
         limit = min(max(1, limit), 50)
     except (ValueError, TypeError):
         limit = 5
-    images = Image.objects.filter(created_by=request.user)[:limit]
+    images = Image.objects.filter(
+        created_by=request.user
+    ).select_related('study')[:limit]
     
     return Response({
         'images': [
@@ -535,7 +552,9 @@ def recent_studies(request):
         limit = min(max(1, limit), 50)
     except (ValueError, TypeError):
         limit = 5
-    studies = Study.objects.filter(created_by=request.user)[:limit]
+    studies = Study.objects.filter(
+        created_by=request.user
+    ).select_related('patient', 'patient')[:limit]
     
     return Response({
         'studies': [
@@ -592,39 +611,58 @@ def generate_ai_report(request, study_id):
     if not images.exists():
         return Response({'message': 'No images found for this study'}, status=400)
     
-    mock_analysis = {
-        'summary': f'AI analysis for {study.study_type} study with {images.count()} images',
-        'confidence': 0.92,
-        'findings': [
-            'No acute abnormalities detected',
-            'Normal anatomical structures visualized',
-            'Comparison with prior studies recommended if available',
-        ],
-        'recommendations': [
-            'Clinical correlation recommended',
-            'Follow-up imaging in 6-12 months if clinically indicated',
-        ],
-    }
+    clinical_history = request.data.get('clinical_history', '')
     
-    study.ai_analysis = mock_analysis
-    study.report_generated = True
-    study.save()
-    
-    user_profile.daily_quota_used += 1
-    user_profile.save()
-    
-    ImageProcessingLog.objects.create(
-        user=request.user,
-        image=images.first(),
-        action_type='analyze',
-        ip_address=request.META.get('REMOTE_ADDR'),
-        user_agent=request.META.get('HTTP_USER_AGENT', ''),
-    )
-    
-    return Response({
-        'message': 'AI report generated successfully',
-        'analysis': mock_analysis,
-    })
+    try:
+        from telemed.services.ai_analyzer import MedicalImageAnalyzer
+        analyzer = MedicalImageAnalyzer()
+        
+        patient_dob = None
+        if study.patient.date_of_birth:
+            from datetime import date
+            today = date.today()
+            age = today.year - study.patient.date_of_birth.year - (
+                (today.month, today.day) < (study.patient.date_of_birth.month, study.patient.date_of_birth.day)
+            )
+            patient_dob = str(age)
+        
+        analysis_result = analyzer.analyze_study(
+            study_type=study.study_type,
+            patient_name=study.patient.name,
+            patient_age=patient_dob,
+            clinical_history=clinical_history,
+            image_count=images.count()
+        )
+        
+        study.ai_analysis = analysis_result
+        study.report_generated = True
+        study.save()
+        
+        user_profile.daily_quota_used += 1
+        user_profile.save()
+        
+        ImageProcessingLog.objects.create(
+            user=request.user,
+            image=images.first(),
+            action_type='analyze',
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
+        
+        return Response({
+            'message': 'AI report generated successfully',
+            'analysis': analysis_result,
+        })
+        
+    except ValueError as e:
+        return Response({
+            'message': f'AI configuration error: {str(e)}',
+            'suggestion': 'Please configure an LLM provider in settings'
+        }, status=503)
+    except Exception as e:
+        return Response({
+            'message': f'AI analysis failed: {str(e)}',
+        }, status=500)
 
 
 @login_required
@@ -715,7 +753,9 @@ def ai_report_view(request):
 
 @login_required
 def dicom_viewer_view(request):
-    studies = Study.objects.filter(created_by=request.user).select_related('patient')
+    studies = Study.objects.filter(
+        created_by=request.user
+    ).select_related('patient')
     return render(request, 'telemed/viewer.html', {'studies': studies})
 
 
@@ -751,7 +791,137 @@ def enhance_view(request):
     return render(request, 'telemed/enhance.html', {'studies': studies})
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def enhance_image(request, image_id):
+    image = get_object_or_404(Image, id=image_id, created_by=request.user)
+    
+    enhancement_type = request.data.get('type', 'auto')
+    
+    valid_types = ['auto', 'brightness', 'contrast', 'sharpen', 'denoise', 'edge', 'invert']
+    if enhancement_type not in valid_types:
+        return Response({'message': f'Invalid enhancement type. Must be one of: {", ".join(valid_types)}'}, status=400)
+    
+    file_path = os.path.join(settings.UPLOAD_FOLDER, image.filename)
+    if not os.path.exists(file_path):
+        return Response({'message': 'Image file not found'}, status=404)
+    
+    try:
+        from PIL import Image as PILImage, ImageEnhance, ImageFilter
+        import io
+        
+        with PILImage.open(file_path) as img:
+            original_mode = img.mode
+            if original_mode != 'RGB':
+                img = img.convert('RGB')
+            
+            if enhancement_type == 'brightness':
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(1.5)
+            elif enhancement_type == 'contrast':
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.5)
+            elif enhancement_type == 'sharpen':
+                img = img.filter(ImageFilter.SHARPEN)
+            elif enhancement_type == 'denoise':
+                img = img.filter(ImageFilter.SMOOTH)
+            elif enhancement_type == 'edge':
+                img = img.filter(ImageFilter.FIND_EDGES)
+            elif enhancement_type == 'invert':
+                img = ImageEnhance.Invert(img)
+            else:
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.2)
+                enhancer = ImageEnhance.Sharpness(img)
+                img = enhancer.enhance(1.2)
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            enhanced_filename = f"enhanced_{enhancement_type}_{timestamp}_{image.filename}"
+            enhanced_path = os.path.join(settings.UPLOAD_FOLDER, enhanced_filename)
+            
+            img.save(enhanced_path, quality=95)
+            
+            enhanced_size = os.path.getsize(enhanced_path)
+            
+            new_image = Image.objects.create(
+                study=image.study,
+                patient=image.patient,
+                filename=enhanced_filename,
+                original_filename=f"enhanced_{image.original_filename}",
+                file_size=enhanced_size,
+                content_type='image/jpeg',
+                is_dicom=False,
+                created_by=request.user,
+            )
+            
+            ImageProcessingLog.objects.create(
+                user=request.user,
+                image=new_image,
+                action_type='upload',
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                details=f'Image enhancement: {enhancement_type}'
+            )
+            
+            return Response({
+                'message': 'Image enhanced successfully',
+                'image': {
+                    'id': str(new_image.id),
+                    'filename': new_image.filename,
+                    'original_filename': new_image.original_filename,
+                    'file_size': new_image.file_size,
+                },
+                'enhancement': enhancement_type
+            }, status=201)
+            
+    except ImportError:
+        return Response({'message': 'Image processing library not available'}, status=501)
+    except Exception as e:
+        return Response({'message': f'Enhancement failed: {str(e)}'}, status=500)
+
+
 @login_required
 def measure_view(request):
     studies = Study.objects.filter(created_by=request.user).select_related('patient')
     return render(request, 'telemed/measure.html', {'studies': studies})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_measurement(request, image_id):
+    image = get_object_or_404(Image, id=image_id, created_by=request.user)
+    
+    measurement_type = request.data.get('type', 'line')
+    value = request.data.get('value', 0)
+    unit = request.data.get('unit', 'mm')
+    x1 = request.data.get('x1', 0)
+    y1 = request.data.get('y1', 0)
+    x2 = request.data.get('x2', 0)
+    y2 = request.data.get('y2', 0)
+    label = request.data.get('label', '')
+    
+    valid_types = ['line', 'angle', 'area', 'ellipse', 'arrow']
+    if measurement_type not in valid_types:
+        return Response({'message': f'Invalid measurement type'}, status=400)
+    
+    measurement_data = {
+        'type': measurement_type,
+        'value': value,
+        'unit': unit,
+        'points': {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2},
+        'label': label,
+    }
+    
+    existing_measurements = image.dicom_metadata.get('measurements', []) if image.dicom_metadata else []
+    existing_measurements.append(measurement_data)
+    
+    if not image.dicom_metadata:
+        image.dicom_metadata = {}
+    image.dicom_metadata['measurements'] = existing_measurements
+    image.save()
+    
+    return Response({
+        'message': 'Measurement saved',
+        'measurement': measurement_data,
+        'total_measurements': len(existing_measurements)
+    })

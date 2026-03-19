@@ -16,6 +16,12 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['quota_reset_date']),
+        ]
+    
     def __str__(self):
         return f"{self.user.username}'s profile"
     
@@ -24,13 +30,17 @@ class UserProfile(models.Model):
         if self.quota_reset_date < today:
             self.daily_quota_used = 0
             self.quota_reset_date = today
-            self.save()
+            self.save(update_fields=['daily_quota_used', 'quota_reset_date'])
     
     @property
     def quota_remaining(self):
         from django.conf import settings
         self.check_and_reset_quota()
         return max(0, settings.DAILY_IMAGE_QUOTA - self.daily_quota_used)
+    
+    @quota_remaining.setter
+    def quota_remaining(self, value):
+        pass
     
     @property
     def quota_percent(self):
@@ -57,6 +67,12 @@ class Patient(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='patients')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['created_by', '-created_at']),
+            models.Index(fields=['patient_id']),
+        ]
     
     def __str__(self):
         return f"{self.name} ({self.patient_id})"
@@ -90,6 +106,11 @@ class Study(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['patient']),
+            models.Index(fields=['created_by', '-created_at']),
+            models.Index(fields=['-created_at']),
+        ]
     
     def __str__(self):
         return f"{self.study_type} - {self.patient.name}"
@@ -114,6 +135,11 @@ class Image(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['study']),
+            models.Index(fields=['created_by', '-created_at']),
+            models.Index(fields=['-created_at']),
+        ]
     
     def __str__(self):
         return self.original_filename
@@ -140,9 +166,14 @@ class ImageProcessingLog(models.Model):
     processed_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True, default='')
+    details = models.TextField(blank=True, default='')
     
     class Meta:
         ordering = ['-processed_at']
+        indexes = [
+            models.Index(fields=['user', '-processed_at']),
+            models.Index(fields=['image']),
+        ]
     
     def __str__(self):
         return f"{self.user.username} - {self.action_type} at {self.processed_at}"
@@ -157,3 +188,56 @@ class Feedback(models.Model):
     
     def __str__(self):
         return f"Feedback from {self.user.username if self.user else 'Anonymous'}"
+
+
+class EncryptionKey(models.Model):
+    ENCRYPTION_MODE_CHOICES = [
+        ('itied', 'ITIED (Encryption Only)'),
+        ('itiedc', 'ITIEDC (Encryption + Compression)'),
+    ]
+    
+    image = models.OneToOneField(
+        Image, 
+        on_delete=models.CASCADE, 
+        related_name='encryption_key',
+        help_text="The image this encryption key belongs to"
+    )
+    mode = models.CharField(
+        max_length=10, 
+        choices=ENCRYPTION_MODE_CHOICES,
+        default='itied',
+        help_text="Encryption mode used"
+    )
+    dna_rule = models.IntegerField(
+        help_text="DNA encoding rule (1-8) used for this encryption"
+    )
+    pwlc_p = models.FloatField(
+        help_text="PWLCM control parameter p"
+    )
+    pwlc_x0 = models.FloatField(
+        help_text="PWLCM initial value x0"
+    )
+    sha256_hash = models.CharField(
+        max_length=64,
+        help_text="SHA-256 hash of the original image"
+    )
+    encrypted_otp_key = models.BinaryField(
+        help_text="OTP key encrypted with master key"
+    )
+    compression_metadata = models.JSONField(
+        null=True, 
+        blank=True,
+        help_text="Compression metadata for ITIEDC mode (frequency table, etc.)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Encryption Key"
+        verbose_name_plural = "Encryption Keys"
+        indexes = [
+            models.Index(fields=['image']),
+            models.Index(fields=['sha256_hash']),
+        ]
+    
+    def __str__(self):
+        return f"EncryptionKey for {self.image.filename} (rule={self.dna_rule})"
