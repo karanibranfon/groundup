@@ -3,16 +3,28 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.views.generic import RedirectView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from blog import views as blog_views
 
 urlpatterns = [
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg', permanent=True)),
     path('admin/', admin.site.urls),
     
     # Root URL - landing page and main app routes
     path('', include('telemed.urls')),
+    
+    # Blog app routes
+    path('blog/', include('blog.urls')),
+    path('blog/', include([
+        path('', blog_views.blog_index, name='blog_index'),
+        path('create/', blog_views.blog_create, name='blog_create'),
+        path('<slug:slug>/', blog_views.blog_detail, name='post_detail'),
+        path('<slug:slug>/edit/', blog_views.blog_edit, name='blog_edit'),
+    ])),
     
     # Unified authentication URLs (at root level)
     path('login/', auth_views.LoginView.as_view(template_name='telemed/login.html'), name='login'),

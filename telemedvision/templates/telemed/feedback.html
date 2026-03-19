@@ -1,10 +1,10 @@
 {% extends 'telemed/base.html' %}
+{% load static %}
 {% block title %}Send feedback - TeleMed Vision{% endblock %}
 
 {% block extra_css %}
-   <link rel="stylesheet" href="../../../static/css/output.b9a4961a16f7.css">
-		<link rel="stylesheet" href="../../../static/css/output.4d5edab1d566.css" type="text/css" media="screen">
-	
+<link rel="stylesheet" href="{% static 'css/output.b9a4961a16f7.css' %}">
+<link rel="stylesheet" href="{% static 'css/output.4d5edab1d566.css' %}" type="text/css" media="screen">
 {% endblock %}
 
 {% block content %}
