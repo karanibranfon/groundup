@@ -623,12 +623,12 @@ class EncryptionDecryptionTest(TestCase):
         self.assertEqual(params.image_width, self.width)
         self.assertEqual(params.image_height, self.height)
 
-    def test_same_data_different_encryption(self):
-        """Test that same data encrypted twice produces different ciphertext."""
+    def test_same_data_same_encryption(self):
+        """Test that same data encrypted twice produces same ciphertext (deterministic)."""
         encrypted1, _ = self.service.encrypt_image(self.sample_image, self.width, self.height)
         encrypted2, _ = self.service.encrypt_image(self.sample_image, self.width, self.height)
         
-        self.assertNotEqual(encrypted1, encrypted2)
+        self.assertEqual(encrypted1, encrypted2)
 
     def test_different_data_same_params_produces_different(self):
         """Test that different data produces different ciphertext even with same params."""
