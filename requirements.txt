@@ -1,5 +1,6 @@
 django
 djangorestframework
+numpy
 djangorestframework-simplejwt
 channels
 channels-redis

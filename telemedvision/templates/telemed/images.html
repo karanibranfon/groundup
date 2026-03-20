@@ -222,13 +222,51 @@
                                accept=".dcm,.jpg,.jpeg,.png,.tiff,.tif" required>
                         <small class="text-muted">Allowed: DICOM, JPG, PNG, TIFF (max 50MB)</small>
                     </div>
-                    <div class="progress" style="display: none;">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    
+                    <!-- Progress Section -->
+                    <div id="uploadProgress" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="bi bi-shield-lock"></i> <strong>Security:</strong> Your image will be encrypted using DNA-Chaos encryption.
+                        </div>
+                        
+                        <div class="mb-2">
+                            <span id="progressLabel">Initializing...</span>
+                            <span id="progressPercent" class="float-end">0%</span>
+                        </div>
+                        <div class="progress mb-3" style="height: 20px;">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        
+                        <div id="uploadSteps" class="small">
+                            <div class="d-flex align-items-center mb-2" id="step1">
+                                <span class="badge bg-secondary me-2">1</span>
+                                <span id="step1Text">Uploading file...</span>
+                                <i class="bi bi-check-circle text-success ms-auto" id="step1Check" style="display: none;"></i>
+                            </div>
+                            <div class="d-flex align-items-center mb-2" id="step2">
+                                <span class="badge bg-secondary me-2">2</span>
+                                <span id="step2Text">Encrypting with DNA-Chaos...</span>
+                                <i class="bi bi-check-circle text-success ms-auto" id="step2Check" style="display: none;"></i>
+                            </div>
+                            <div class="d-flex align-items-center mb-2" id="step3">
+                                <span class="badge bg-secondary me-2">3</span>
+                                <span id="step3Text">Storing encrypted data...</span>
+                                <i class="bi bi-check-circle text-success ms-auto" id="step3Check" style="display: none;"></i>
+                            </div>
+                            <div class="d-flex align-items-center" id="step4">
+                                <span class="badge bg-secondary me-2">4</span>
+                                <span id="step4Text">Finalizing...</span>
+                                <i class="bi bi-check-circle text-success ms-auto" id="step4Check" style="display: none;"></i>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <div id="uploadStatus" class="alert" style="display: none;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Upload</button>
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal" id="uploadCancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="uploadSubmitBtn">Upload</button>
                 </div>
             </form>
         </div>
@@ -320,25 +358,147 @@ document.getElementById('studyFilter').addEventListener('change', function() {
     }
 });
 
+// Upload progress functions
+function setProgress(percent, label) {
+    document.getElementById('progressBar').style.width = percent + '%';
+    document.getElementById('progressPercent').textContent = percent + '%';
+    if (label) document.getElementById('progressLabel').textContent = label;
+}
+
+function setStep(stepNum, status) {
+    const badge = document.querySelector(`#step${stepNum} .badge`);
+    const text = document.getElementById(`step${stepNum}Text`);
+    const check = document.getElementById(`step${stepNum}Check`);
+    
+    if (status === 'done') {
+        badge.className = 'badge bg-success me-2';
+        text.className = 'text-success';
+        check.style.display = 'block';
+    } else if (status === 'active') {
+        badge.className = 'badge bg-primary me-2';
+        text.className = 'fw-bold';
+    } else {
+        badge.className = 'badge bg-secondary me-2';
+        text.className = '';
+    }
+}
+
+function resetUploadUI() {
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadStatus').style.display = 'none';
+    document.getElementById('uploadSubmitBtn').disabled = false;
+    document.getElementById('uploadCancelBtn').disabled = false;
+    setProgress(0);
+    for (let i = 1; i <= 4; i++) {
+        setStep(i, 'pending');
+        document.getElementById(`step${i}Check`).style.display = 'none';
+    }
+}
+
 document.getElementById('uploadForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
+    const fileInput = document.getElementById('imageFile');
     
-    fetch('/api/images/upload', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
-        }
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.id) {
-            location.reload();
-        } else {
-            alert(d.message || 'Upload failed');
+    if (!fileInput.files.length) {
+        alert('Please select a file');
+        return;
+    }
+    
+    // Show progress UI
+    document.getElementById('uploadProgress').style.display = 'block';
+    document.getElementById('uploadStatus').style.display = 'none';
+    document.getElementById('uploadSubmitBtn').disabled = true;
+    
+    // Step 1: Uploading
+    setStep(1, 'active');
+    setProgress(10, 'Uploading...');
+    
+    // Use XMLHttpRequest for upload progress tracking
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percent = 10 + Math.round((e.loaded / e.total) * 40);
+            setProgress(percent, 'Uploading: ' + formatBytes(e.loaded) + ' / ' + formatBytes(e.total));
         }
     });
+    
+    xhr.addEventListener('load', function() {
+        if (xhr.status === 201) {
+            const d = JSON.parse(xhr.responseText);
+            
+            // Step 2: Encrypting (server-side)
+            setStep(1, 'done');
+            setStep(2, 'active');
+            setProgress(55, 'Encrypting...');
+            
+            setTimeout(() => {
+                setStep(2, 'done');
+                setStep(3, 'active');
+                setProgress(75, 'Storing encrypted data...');
+                
+                setTimeout(() => {
+                    setStep(3, 'done');
+                    setStep(4, 'active');
+                    setProgress(90, 'Finalizing...');
+                    
+                    setTimeout(() => {
+                        setStep(4, 'done');
+                        setProgress(100, 'Complete!');
+                        
+                        // Show success
+                        const statusEl = document.getElementById('uploadStatus');
+                        statusEl.className = 'alert alert-success';
+                        statusEl.innerHTML = `<i class="bi bi-check-circle"></i> <strong>Upload Complete!</strong><br>
+                            Encrypted with DNA-Chaos (Rule ${d.encryption.dna_rule})<br>
+                            Original: ${formatBytes(d.file_size)} → Encrypted: ${formatBytes(d.encrypted_size)}`;
+                        statusEl.style.display = 'block';
+                        
+                        setTimeout(() => location.reload(), 2000);
+                    }, 300);
+                }, 300);
+            }, 300);
+            
+        } else {
+            try {
+                const d = JSON.parse(xhr.responseText);
+                showUploadError(d.message || 'Upload failed');
+            } catch {
+                showUploadError('Upload failed');
+            }
+        }
+    });
+    
+    xhr.addEventListener('error', function() {
+        showUploadError('Network error during upload');
+    });
+    
+    xhr.open('POST', '/api/images/upload');
+    xhr.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
+    xhr.send(formData);
+});
+
+function showUploadError(message) {
+    const statusEl = document.getElementById('uploadStatus');
+    statusEl.className = 'alert alert-danger';
+    statusEl.innerHTML = `<i class="bi bi-exclamation-triangle"></i> <strong>Error:</strong> ${message}`;
+    statusEl.style.display = 'block';
+    document.getElementById('uploadSubmitBtn').disabled = false;
+    setProgress(0, 'Failed');
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Reset UI when modal is closed
+document.getElementById('uploadImageModal').addEventListener('hidden.bs.modal', function() {
+    resetUploadUI();
 });
 
 function deleteImage(id) {

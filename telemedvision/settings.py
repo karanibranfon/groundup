@@ -123,10 +123,10 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-# Media files (uploads)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'media', 'uploads')
+# Image upload folders (in static for serving)
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+ENCRYPTED_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads', 'encrypted')
+DECRYPTED_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads', 'decrypted')
 
 # Image processing quota (free tier)
 DAILY_IMAGE_QUOTA = 10

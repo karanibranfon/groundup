@@ -1,15 +1,17 @@
 import os
+import json
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse, FileResponse
+from django.http import JsonResponse, FileResponse, StreamingHttpResponse
 from django.conf import settings
 from django.core.paginator import Paginator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import UserProfile, Patient, Study, Image, ImageProcessingLog
+from .models import UserProfile, Patient, Study, Image, ImageProcessingLog, EncryptionKey
+from .services.dna_chaos_encryption import DNACryptoService
 
 
 def index(request):
@@ -400,48 +402,101 @@ def upload_image(request):
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_filename = f"{timestamp}_{filename}"
+        encrypted_filename = f"{timestamp}_{filename}.encrypted"
         
         upload_dir = settings.UPLOAD_FOLDER
         os.makedirs(upload_dir, exist_ok=True)
+        os.makedirs(settings.ENCRYPTED_FOLDER, exist_ok=True)
+        
         file_path = os.path.join(upload_dir, unique_filename)
+        encrypted_path = os.path.join(settings.ENCRYPTED_FOLDER, encrypted_filename)
         
         try:
+            # Step 1: Save uploaded file
+            file_size = 0
             with open(file_path, 'wb+') as destination:
                 for chunk in uploaded_file.chunks():
                     destination.write(chunk)
+                    file_size += len(chunk)
+            
+            # Step 2: Read the uploaded file for encryption
+            with open(file_path, 'rb') as f:
+                image_bytes = f.read()
+            
+            width = 256
+            height = len(image_bytes) // 256 if len(image_bytes) >= 256 else 1
+            
+            # Step 3: Encrypt the image
+            crypto_service = DNACryptoService()
+            encrypted_data, params = crypto_service.encrypt_image(
+                image_bytes,
+                width,
+                height
+            )
+            
+            # Step 4: Save encrypted data
+            with open(encrypted_path, 'wb') as f:
+                f.write(encrypted_data)
+            
+            # Step 5: Create Image record
+            image = Image.objects.create(
+                study=study,
+                patient=study.patient,
+                filename=unique_filename,
+                original_filename=filename,
+                file_size=file_size,
+                content_type=uploaded_file.content_type or 'application/octet-stream',
+                is_dicom=ext == 'dcm',
+                created_by=request.user,
+            )
+            
+            # Step 6: Create EncryptionKey record
+            EncryptionKey.objects.create(
+                image=image,
+                mode='itied',
+                dna_rule=params.dna_rule,
+                pwlc_p=params.pwlc_p,
+                pwlc_x0=params.pwlc_x0,
+                sha256_hash=params.sha256_hash,
+                encrypted_otp_key=encrypted_data[:1024] if len(encrypted_data) >= 1024 else encrypted_data
+            )
+            
+            # Step 7: Log the upload
+            ImageProcessingLog.objects.create(
+                user=request.user,
+                image=image,
+                action_type='upload',
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                details=json.dumps({
+                    'encryption': 'dna_chaos_itied',
+                    'dna_rule': params.dna_rule,
+                    'original_size': file_size,
+                    'encrypted_size': len(encrypted_data)
+                })
+            )
+            
+            user_profile.daily_quota_used += 1
+            user_profile.save()
+            
+            return Response({
+                'id': str(image.id),
+                'filename': image.filename,
+                'original_filename': image.original_filename,
+                'file_size': image.file_size,
+                'encrypted_size': len(encrypted_data),
+                'encryption': {
+                    'mode': 'dna_chaos_itied',
+                    'dna_rule': params.dna_rule
+                }
+            }, status=201)
+            
         except Exception as e:
             if os.path.exists(file_path):
                 os.remove(file_path)
-            return Response({'message': f'Error saving file: {str(e)}'}, status=500)
-        
-        image = Image.objects.create(
-            study=study,
-            patient=study.patient,
-            filename=unique_filename,
-            original_filename=filename,
-            file_size=uploaded_file.size,
-            content_type=uploaded_file.content_type or 'application/octet-stream',
-            is_dicom=ext == 'dcm',
-            created_by=request.user,
-        )
-        
-        ImageProcessingLog.objects.create(
-            user=request.user,
-            image=image,
-            action_type='upload',
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', ''),
-        )
-        
-        user_profile.daily_quota_used += 1
-        user_profile.save()
-        
-        return Response({
-            'id': str(image.id),
-            'filename': image.filename,
-            'original_filename': image.original_filename,
-            'file_size': image.file_size,
-        }, status=201)
+            if os.path.exists(encrypted_path):
+                os.remove(encrypted_path)
+            return Response({'message': f'Error processing file: {str(e)}'}, status=500)
 
 
 @api_view(['GET'])
@@ -473,28 +528,73 @@ def get_image_file(request, image_id):
     user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
     user_profile.check_and_reset_quota()
     
-    ImageProcessingLog.objects.create(
-        user=request.user,
-        image=image,
-        action_type='view',
-        ip_address=request.META.get('REMOTE_ADDR'),
-        user_agent=request.META.get('HTTP_USER_AGENT', ''),
-    )
+    # Check for encryption key
+    try:
+        enc_key = image.encryption_key
+    except EncryptionKey.DoesNotExist:
+        return Response({'message': 'Encryption key not found for this image'}, status=404)
     
     safe_filename = os.path.basename(image.filename)
-    if safe_filename != image.filename:
-        return Response({'message': 'Invalid filename'}, status=400)
+    encrypted_filename = f"{safe_filename}.encrypted"
     
-    file_path = os.path.join(settings.UPLOAD_FOLDER, safe_filename)
-    resolved_path = os.path.realpath(file_path)
-    upload_folder_real = os.path.realpath(settings.UPLOAD_FOLDER)
+    encrypted_path = os.path.join(settings.ENCRYPTED_FOLDER, encrypted_filename)
+    resolved_path = os.path.realpath(encrypted_path)
+    encrypted_folder_real = os.path.realpath(settings.ENCRYPTED_FOLDER)
     
-    if not resolved_path.startswith(upload_folder_real + os.sep):
+    if not resolved_path.startswith(encrypted_folder_real + os.sep):
         return Response({'message': 'Access denied'}, status=403)
     
-    if os.path.exists(resolved_path) and os.path.isfile(resolved_path):
-        return FileResponse(open(resolved_path, 'rb'), as_attachment=False, filename=image.original_filename)
-    return Response({'message': 'Image file not found'}, status=404)
+    if not os.path.exists(resolved_path) or not os.path.isfile(resolved_path):
+        return Response({'message': 'Encrypted file not found'}, status=404)
+    
+    try:
+        # Read encrypted data
+        with open(resolved_path, 'rb') as f:
+            encrypted_data = f.read()
+        
+        # Decrypt the image
+        crypto_service = DNACryptoService()
+        
+        from .services.dna_chaos_encryption import EncryptionParams
+        dec_params = EncryptionParams(
+            dna_rule=enc_key.dna_rule,
+            pwlc_p=float(enc_key.pwlc_p),
+            pwlc_x0=float(enc_key.pwlc_x0),
+            sha256_hash=enc_key.sha256_hash,
+            image_width=256,
+            image_height=len(encrypted_data) // (256 * 4) if len(encrypted_data) >= 256 * 4 else 1
+        )
+        
+        decrypted_bytes = crypto_service.decrypt_image(encrypted_data, dec_params)
+        
+        # Save to decrypted folder for caching
+        os.makedirs(settings.DECRYPTED_FOLDER, exist_ok=True)
+        decrypted_path = os.path.join(settings.DECRYPTED_FOLDER, safe_filename)
+        with open(decrypted_path, 'wb') as f:
+            f.write(decrypted_bytes)
+        
+        # Log the view
+        ImageProcessingLog.objects.create(
+            user=request.user,
+            image=image,
+            action_type='view',
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            details=json.dumps({
+                'decryption': 'dna_chaos_itied',
+                'dna_rule': enc_key.dna_rule
+            })
+        )
+        
+        # Return decrypted file
+        return FileResponse(
+            open(decrypted_path, 'rb'),
+            as_attachment=False,
+            filename=image.original_filename
+        )
+        
+    except Exception as e:
+        return Response({'message': f'Error decrypting file: {str(e)}'}, status=500)
 
 
 @api_view(['DELETE'])
@@ -502,9 +602,27 @@ def get_image_file(request, image_id):
 def delete_image(request, image_id):
     image = get_object_or_404(Image, id=image_id, created_by=request.user)
     
+    # Delete original upload
     file_path = os.path.join(settings.UPLOAD_FOLDER, image.filename)
     if os.path.exists(file_path):
         os.remove(file_path)
+    
+    # Delete encrypted file
+    encrypted_filename = f"{image.filename}.encrypted"
+    encrypted_path = os.path.join(settings.ENCRYPTED_FOLDER, encrypted_filename)
+    if os.path.exists(encrypted_path):
+        os.remove(encrypted_path)
+    
+    # Delete decrypted cache
+    decrypted_path = os.path.join(settings.DECRYPTED_FOLDER, image.filename)
+    if os.path.exists(decrypted_path):
+        os.remove(decrypted_path)
+    
+    # Delete encryption key
+    try:
+        image.encryption_key.delete()
+    except EncryptionKey.DoesNotExist:
+        pass
     
     ImageProcessingLog.objects.create(
         user=request.user,
