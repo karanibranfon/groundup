@@ -3,7 +3,58 @@
 
 {% block title %}Questions - Syringly{% endblock %}
 
+{% block extra_css %}
+<style>
+.recently-viewed {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #fff8f5;
+    border: 1px solid #f8d7da;
+    border-radius: 4px;
+}
+.recently-viewed h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: #721c24;
+}
+.recently-viewed ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.recently-viewed li {
+    padding: 4px 0;
+    border-bottom: 1px solid #eee;
+}
+.recently-viewed li:last-child {
+    border-bottom: none;
+}
+.recently-viewed a {
+    color: #0077cc;
+    text-decoration: none;
+    font-size: 13px;
+}
+.recently-viewed a:hover {
+    color: #0055aa;
+}
+.clear-recently {
+    font-size: 11px;
+    color: #6a737c;
+    cursor: pointer;
+    margin-left: 8px;
+}
+.clear-recently:hover {
+    color: #0077cc;
+}
+</style>
+{% endblock %}
+
 {% block content %}
+<div id="recently-viewed-section" class="recently-viewed" style="display: none;">
+    <h3><i class="bi bi-clock-history"></i> Recently Viewed <span class="clear-recently" onclick="clearRecentlyViewed()">Clear</span></h3>
+    <ul id="recently-viewed-list"></ul>
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>{% if tag_slug %}Questions tagged [{{ tag_slug }}]{% else %}All Questions{% endif %}</h1>
     <a href="{% url 'syringly:ask_question' %}" class="btn btn-primary">Ask Question</a>
@@ -11,10 +62,10 @@
 
 <div class="filters mb-4">
     <div class="btn-group" role="group">
-        <a href="?sort=newest{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'newest' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Newest</a>
-        <a href="?sort=active{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'active' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Active</a>
-        <a href="?sort=unanswered{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'unanswered' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Unanswered</a>
-        <a href="?sort=votes{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'votes' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Most Votes</a>
+        <a href="?sort=newest{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn btn-sort {% if sort == 'newest' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" data-sort="newest">Newest</a>
+        <a href="?sort=active{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn btn-sort {% if sort == 'active' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" data-sort="active">Active</a>
+        <a href="?sort=unanswered{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn btn-sort {% if sort == 'unanswered' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" data-sort="unanswered">Unanswered</a>
+        <a href="?sort=votes{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn btn-sort {% if sort == 'votes' %}btn-secondary{% else %}btn-outline-secondary{% endif %}" data-sort="votes">Most Votes</a>
     </div>
 </div>
 
@@ -76,4 +127,46 @@
     </ul>
 </nav>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize recently viewed section
+document.addEventListener('DOMContentLoaded', function() {
+    updateRecentlyViewedUI();
+    
+    // Save sort preference when clicking sort buttons
+    document.querySelectorAll('.btn-sort').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const sort = this.dataset.sort;
+            UserPreferences.update('sort', sort);
+        });
+    });
+});
+
+function updateRecentlyViewedUI() {
+    const section = document.getElementById('recently-viewed-section');
+    const list = document.getElementById('recently-viewed-list');
+    const items = RecentlyViewed.get();
+    
+    if (items.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    list.innerHTML = '';
+    
+    items.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="/syringly/questions/${item.id}/">${item.title}</a>`;
+        list.appendChild(li);
+    });
+}
+
+function clearRecentlyViewed() {
+    RecentlyViewed.clear();
+    updateRecentlyViewedUI();
+}
+</script>
 {% endblock %}

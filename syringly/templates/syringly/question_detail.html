@@ -1,9 +1,21 @@
 {% extends 'syringly/base.html' %}
+{% load syringly_extras %}
 
 {% block title %}{{ question.title }} - Syringly{% endblock %}
 
+{% block extra_css %}
+<style>
+.vote-btn.voted-up {
+    color: #f48024 !important;
+}
+.vote-btn.voted-down {
+    color: #f48024 !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="question-detail">
+<div class="question-detail" data-question-id="{{ question.id }}">
     <div class="question-header">
         <h1>{{ question.title }}</h1>
         <div class="question-meta">
@@ -108,33 +120,11 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-document.querySelectorAll('.vote-btn').forEach(btn => {
-    btn.addEventListener('click', async function() {
-        const vote = this.dataset.vote;
-        const type = this.dataset.type;
-        const id = this.dataset.id;
-        const contentTypeId = type === 'question' ? {{ question_content_type }} : {{ answer_content_type }};
-        
-        try {
-            const response = await fetch('{% url "syringly:vote" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: `content_type_id=${contentTypeId}&object_id=${id}&value=${vote}`
-            });
-            const data = await response.json();
-            if (data.success) {
-                this.closest('.vote-cell').querySelector('.vote-count').textContent = data.new_votes;
-                this.classList.toggle('active');
-            }
-        } catch (error) {
-            console.error('Vote error:', error);
-        }
-    });
-});
+window.questionContentType = {{ question_content_type }};
+window.answerContentType = {{ answer_content_type }};
 </script>
 {% endblock %}
