@@ -14,9 +14,9 @@ urlpatterns = [
     path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg', permanent=True)),
     path('admin/', admin.site.urls),
     
-    # Root URL - landing page and main app routes
-    path('', include('telemed.urls')),
-    
+    # Syringly app routes (Q&A for medics) - MUST be before root
+    path('syringly/', include('syringly.urls')),
+
     # Blog app routes
     path('blog/', include('blog.urls')),
     path('blog/', include([
@@ -25,6 +25,9 @@ urlpatterns = [
         path('<slug:slug>/', blog_views.blog_detail, name='post_detail'),
         path('<slug:slug>/edit/', blog_views.blog_edit, name='blog_edit'),
     ])),
+    
+    # Chat app routes
+    path('chat/', include('chat.urls')),
     
     # Unified authentication URLs (at root level)
     path('login/', auth_views.LoginView.as_view(template_name='telemed/login.html'), name='login'),
@@ -35,8 +38,8 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Chat app routes
-    path('chat/', include('chat.urls')),
+    # Root URL - landing page and main app routes (MUST be last)
+    path('', include('telemed.urls')),
     
     # Password reset URLs
     path('password_reset/', auth_views.PasswordResetView.as_view(template_name='telemed/password_reset.html'), name='password_reset'),

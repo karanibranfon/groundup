@@ -1,0 +1,24 @@
+{% extends 'syringly/base.html' %}
+
+{% block title %}Tags - Syringly{% endblock %}
+
+{% block content %}
+<div class="tags-page">
+    <h1>Tags</h1>
+    <p class="lead">A tag is a keyword or label that categorizes your question with other, similar questions.</p>
+
+    <div class="tags-grid">
+        {% for tag in tags %}
+        <a href="{% url 'syringly:tag_questions' tag.slug %}" class="tag-card">
+            <span class="tag">{{ tag.name }}</span>
+            <span class="tag-count">{{ tag.question_count }} questions</span>
+            {% if tag.description %}
+            <p class="tag-description">{{ tag.description|truncatewords:15 }}</p>
+            {% endif %}
+        </a>
+        {% empty %}
+        <p class="no-tags">No tags yet. Tags will appear when questions are asked.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

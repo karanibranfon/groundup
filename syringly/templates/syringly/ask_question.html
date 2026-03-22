@@ -1,0 +1,52 @@
+{% extends 'syringly/base.html' %}
+
+{% block title %}Ask a Question - Syringly{% endblock %}
+
+{% block content %}
+<div class="ask-question-page">
+    <h1>Ask a Public Question</h1>
+
+    <form method="POST" class="ask-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="title"><strong>Title</strong></label>
+            <p class="help-text">Be specific and imagine you're asking a question to another medical professional.</p>
+            <input type="text" name="title" id="title" class="form-control" placeholder="e.g., What is the recommended treatment protocol for STEMI in patients with contraindications to aspirin?" required>
+        </div>
+
+        <div class="form-group">
+            <label for="body"><strong>Body</strong></label>
+            <p class="help-text">Include all the information someone would need to answer your question.</p>
+            <textarea name="body" id="body" class="form-control" rows="12" placeholder="Describe your question in detail..." required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="tags"><strong>Tags</strong></label>
+            <p class="help-text">Add up to 5 tags to describe what your question is about. Separate tags with commas.</p>
+            <input type="text" name="tags" id="tags" class="form-control" placeholder="e.g., cardiology, emergency-medicine, pharmacology">
+            {% if popular_tags %}
+            <div class="popular-tags mt-2">
+                <span class="text-muted">Popular tags:</span>
+                {% for tag in popular_tags %}
+                <span class="tag clickable" onclick="addTag('{{ tag.name }}')">{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">Post Your Question</button>
+    </form>
+</div>
+
+<script>
+function addTag(tagName) {
+    const tagsInput = document.getElementById('tags');
+    const currentTags = tagsInput.value ? tagsInput.value.split(',').map(t => t.trim()) : [];
+    if (currentTags.length < 5 && !currentTags.includes(tagName)) {
+        currentTags.push(tagName);
+        tagsInput.value = currentTags.join(', ');
+    }
+}
+</script>
+{% endblock %}

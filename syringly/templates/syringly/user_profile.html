@@ -1,0 +1,62 @@
+{% extends 'syringly/base.html' %}
+
+{% block title %}{{ profile.display_name }} - Syringly{% endblock %}
+
+{% block content %}
+<div class="user-profile-page">
+    <div class="profile-header">
+        <div class="avatar">
+            <i class="bi bi-person-circle"></i>
+        </div>
+        <div class="profile-info">
+            <h1>{{ profile.display_name }}</h1>
+            {% if profile.specialty %}
+            <p class="specialty">{{ profile.specialty }}</p>
+            {% endif %}
+            {% if profile.bio %}
+            <p class="bio">{{ profile.bio }}</p>
+            {% endif %}
+            <p class="reputation">
+                <i class="bi bi-star-fill"></i> {{ profile.reputation }} reputation
+            </p>
+            <p class="member-since">Member since {{ profile.created_at|date:"F Y" }}</p>
+        </div>
+    </div>
+
+    <div class="profile-tabs">
+        <h2>Activity</h2>
+    </div>
+
+    <div class="profile-content">
+        <div class="section">
+            <h3>
+                <i class="bi bi-question-circle"></i> Questions ({{ questions|length }})
+            </h3>
+            {% for question in questions %}
+            <div class="activity-item">
+                <span class="votes {% if question.votes > 0 %}positive{% endif %}">{{ question.votes }}</span>
+                <a href="{% url 'syringly:question_detail' question.id %}">{{ question.title }}</a>
+                <span class="time">{{ question.created_at|timesince }} ago</span>
+            </div>
+            {% empty %}
+            <p class="no-activity">No questions yet.</p>
+            {% endfor %}
+        </div>
+
+        <div class="section">
+            <h3>
+                <i class="bi bi-chat-left-text"></i> Answers ({{ answers|length }})
+            </h3>
+            {% for answer in answers %}
+            <div class="activity-item">
+                <span class="votes {% if answer.votes > 0 %}positive{% endif %} {% if answer.is_accepted %}accepted{% endif %}">{{ answer.votes }}</span>
+                <a href="{% url 'syringly:question_detail' answer.question.id %}">{{ answer.question.title }}</a>
+                <span class="time">{{ answer.created_at|timesince }} ago</span>
+            </div>
+            {% empty %}
+            <p class="no-activity">No answers yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

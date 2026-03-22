@@ -1,0 +1,79 @@
+{% extends 'syringly/base.html' %}
+{% load static %}
+
+{% block title %}Questions - Syringly{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{% if tag_slug %}Questions tagged [{{ tag_slug }}]{% else %}All Questions{% endif %}</h1>
+    <a href="{% url 'syringly:ask_question' %}" class="btn btn-primary">Ask Question</a>
+</div>
+
+<div class="filters mb-4">
+    <div class="btn-group" role="group">
+        <a href="?sort=newest{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'newest' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Newest</a>
+        <a href="?sort=active{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'active' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Active</a>
+        <a href="?sort=unanswered{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'unanswered' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Unanswered</a>
+        <a href="?sort=votes{% if tag_slug %}&tag={{ tag_slug }}{% endif %}" class="btn {% if sort == 'votes' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Most Votes</a>
+    </div>
+</div>
+
+<div class="questions-list">
+    {% for question in questions %}
+    <div class="question-card {% if question.is_answered %}answered{% endif %}">
+        <div class="stats">
+            <div class="stat {% if question.votes > 0 %}has-votes{% endif %}">
+                <span class="stat-value">{{ question.votes }}</span>
+                <span class="stat-label">votes</span>
+            </div>
+            <div class="stat {% if question.answer_count > 0 %}has-answers{% endif %} {% if question.is_answered %}accepted{% endif %}">
+                <span class="stat-value">{{ question.answer_count }}</span>
+                <span class="stat-label">answers</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ question.view_count }}</span>
+                <span class="stat-label">views</span>
+            </div>
+        </div>
+        <div class="question-content">
+            <h3 class="question-title">
+                <a href="{% url 'syringly:question_detail' question.id %}">{{ question.title }}</a>
+            </h3>
+            <p class="question-excerpt">{{ question.body|truncatewords:30 }}</p>
+            <div class="question-meta">
+                <div class="tags">
+                    {% for tag in question.tags.all %}
+                    <a href="{% url 'syringly:tag_questions' tag.slug %}" class="tag">{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+                <div class="author">
+                    asked {{ question.created_at|timesince }} ago by 
+                    <a href="{% url 'syringly:user_profile' question.author.id %}">{{ question.author.display_name }}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <i class="bi bi-question-circle" style="font-size: 4rem;"></i>
+        <h3>No questions yet</h3>
+        <p>Be the first to ask a question!</p>
+        <a href="{% url 'syringly:ask_question' %}" class="btn btn-primary">Ask Question</a>
+    </div>
+    {% endfor %}
+</div>
+
+{% if questions.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if questions.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ questions.previous_page_number }}&sort={{ sort }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item"><span class="page-link">Page {{ questions.number }} of {{ questions.paginator.num_pages }}</span></li>
+        {% if questions.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ questions.next_page_number }}&sort={{ sort }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

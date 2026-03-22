@@ -1,0 +1,46 @@
+{% extends 'syringly/base.html' %}
+
+{% block title %}{{ tag.name }} Questions - Syringly{% endblock %}
+
+{% block content %}
+<div class="tag-questions-page">
+    <h1>Questions tagged [{{ tag.name }}]</h1>
+    
+    <div class="tag-info mb-4">
+        {% if tag.description %}
+        <p>{{ tag.description }}</p>
+        {% endif %}
+        <span class="badge bg-secondary">{{ tag.question_count }} questions</span>
+    </div>
+
+    <div class="questions-list">
+        {% for question in questions %}
+        <div class="question-card {% if question.is_answered %}answered{% endif %}">
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-value">{{ question.votes }}</span>
+                    <span class="stat-label">votes</span>
+                </div>
+                <div class="stat {% if question.is_answered %}accepted{% endif %}">
+                    <span class="stat-value">{{ question.answer_count }}</span>
+                    <span class="stat-label">answers</span>
+                </div>
+            </div>
+            <div class="question-content">
+                <h3 class="question-title">
+                    <a href="{% url 'syringly:question_detail' question.id %}">{{ question.title }}</a>
+                </h3>
+                <p class="question-excerpt">{{ question.body|truncatewords:30 }}</p>
+                <div class="question-meta">
+                    <span class="author">asked {{ question.created_at|timesince }} ago by 
+                        <a href="{% url 'syringly:user_profile' question.author.id %}">{{ question.author.display_name }}</a>
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="empty-state">No questions with this tag yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

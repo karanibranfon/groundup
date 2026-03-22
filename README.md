@@ -23,6 +23,18 @@ TeleMedVision is a full-featured medical imaging platform that combines:
 
 ## Features
 
+### Syringly - Medical Q&A Platform
+
+A Stack Overflow-style knowledge sharing platform designed specifically for medical professionals. Syringly enables healthcare workers to:
+
+- **Ask Questions** - Post clinical questions to get expert answers from peers
+- **Share Knowledge** - Answer questions and build collective medical expertise
+- **Tag & Categorize** - Organize questions by medical specialty (Cardiology, Neurology, etc.)
+- **Vote & Reputation** - Upvote helpful answers, build credibility through contributions
+- **Accept Best Answers** - Mark the most helpful response as accepted
+
+Access Syringly at `/syringly/` or via the navigation.
+
 ### Medical Imaging
 - Support for DICOM (.dcm) and standard formats (JPG, PNG, TIFF)
 - Study management (X-Ray, CT, MRI, Ultrasound, PET)
@@ -54,6 +66,15 @@ TeleMedVision is a full-featured medical imaging platform that combines:
 - Message reactions and replies
 - Starred messages and search
 
+### Syringly - Q&A Platform
+- **Questions & Answers** - Post clinical questions, receive expert answers
+- **Voting System** - Upvote/downvote questions and answers
+- **Accepted Answers** - Mark best answers as accepted
+- **Reputation System** - Earn points through contributions
+- **Tags** - Categorize by medical specialty
+- **User Profiles** - Track activity, questions, and answers
+- **Stack Overflow-style UI** - Familiar, professional interface
+
 ### User Management
 - JWT-based authentication
 - Session authentication fallback
@@ -82,6 +103,11 @@ python manage.py runserver
 
 ```
 groundup/
+├── syringly/                 # Medical Q&A platform (Stack Overflow for medics)
+│   ├── models.py             # Question, Answer, Tag, Vote, UserProfile models
+│   ├── views.py              # Q&A views, voting, user profiles
+│   ├── urls.py               # URL routing
+│   └── templates/            # Q&A templates
 ├── telemed/                  # Main telemedicine app
 │   ├── models.py             # Patient, Study, Image, EncryptionKey models
 │   ├── services/

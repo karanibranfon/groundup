@@ -1,0 +1,140 @@
+{% extends 'syringly/base.html' %}
+
+{% block title %}{{ question.title }} - Syringly{% endblock %}
+
+{% block content %}
+<div class="question-detail">
+    <div class="question-header">
+        <h1>{{ question.title }}</h1>
+        <div class="question-meta">
+            <span>Asked {{ question.created_at|timesince }} ago</span>
+            <span>Viewed {{ question.view_count }} times</span>
+        </div>
+    </div>
+
+    <div class="post-layout">
+        <div class="vote-cell">
+            <button class="vote-btn {% if user_vote.value == 1 %}active{% endif %}" data-vote="1" data-type="question" data-id="{{ question.id }}">
+                <i class="bi bi-caret-up-fill"></i>
+            </button>
+            <span class="vote-count">{{ question.votes }}</span>
+            <button class="vote-btn {% if user_vote.value == -1 %}active{% endif %}" data-vote="-1" data-type="question" data-id="{{ question.id }}">
+                <i class="bi bi-caret-down-fill"></i>
+            </button>
+        </div>
+
+        <div class="post-cell">
+            <div class="post-content">
+                {{ question.body|linebreaks }}
+            </div>
+
+            <div class="tags">
+                {% for tag in question.tags.all %}
+                <a href="{% url 'syringly:tag_questions' tag.slug %}" class="tag">{{ tag.name }}</a>
+                {% endfor %}
+            </div>
+
+            <div class="post-actions">
+                <span class="post-author">
+                    asked {{ question.created_at|timesince }} ago by
+                    <a href="{% url 'syringly:user_profile' question.author.id %}">{{ question.author.display_name }}</a>
+                    <span class="reputation">{{ question.author.reputation }} rep</span>
+                </span>
+                {% if user == question.author.user %}
+                <a href="{% url 'syringly:edit_question' question.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="answers-section">
+        <h2>{{ answers|length }} Answer{{ answers|pluralize }}</h2>
+
+        {% for answer in answers %}
+        <div class="answer {% if answer.is_accepted %}accepted{% endif %}" id="answer-{{ answer.id }}">
+            <div class="post-layout">
+                <div class="vote-cell">
+                    <button class="vote-btn {% if user_answer_votes|get_item:answer.id == 1 %}active{% endif %}" data-vote="1" data-type="answer" data-id="{{ answer.id }}">
+                        <i class="bi bi-caret-up-fill"></i>
+                    </button>
+                    <span class="vote-count">{{ answer.votes }}</span>
+                    <button class="vote-btn {% if user_answer_votes|get_item:answer.id == -1 %}active{% endif %}" data-vote="-1" data-type="answer" data-id="{{ answer.id }}">
+                        <i class="bi bi-caret-down-fill"></i>
+                    </button>
+                    {% if answer.is_accepted %}
+                    <i class="bi bi-check-circle-fill accepted-check"></i>
+                    {% elif user == question.author.user %}
+                    <a href="{% url 'syringly:accept_answer' question.id answer.id %}" class="accept-btn" title="Accept this answer">
+                        <i class="bi bi-check-circle"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="post-cell">
+                    <div class="post-content">
+                        {{ answer.body|linebreaks }}
+                    </div>
+
+                    <div class="post-actions">
+                        <span class="post-author">
+                            answered {{ answer.created_at|timesince }} ago by
+                            <a href="{% url 'syringly:user_profile' answer.author.id %}">{{ answer.author.display_name }}</a>
+                            <span class="reputation">{{ answer.author.reputation }} rep</span>
+                        </span>
+                        {% if user == answer.author.user %}
+                        <a href="{% url 'syringly:edit_answer' answer.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="no-answers">No answers yet. Be the first to answer!</p>
+        {% endfor %}
+    </div>
+
+    {% if user.is_authenticated %}
+    <div class="post-answer">
+        <h3>Your Answer</h3>
+        <form method="POST" action="{% url 'syringly:post_answer' question.id %}">
+            {% csrf_token %}
+            <textarea name="body" class="form-control" rows="8" placeholder="Write your answer here..." required></textarea>
+            <button type="submit" class="btn btn-primary mt-3">Post Your Answer</button>
+        </form>
+    </div>
+    {% else %}
+    <div class="login-prompt">
+        <p><a href="{% url 'login' %}">Log in</a> or <a href="{% url 'signup' %}">sign up</a> to post an answer.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.vote-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const vote = this.dataset.vote;
+        const type = this.dataset.type;
+        const id = this.dataset.id;
+        const contentTypeId = type === 'question' ? {{ question_content_type }} : {{ answer_content_type }};
+        
+        try {
+            const response = await fetch('{% url "syringly:vote" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `content_type_id=${contentTypeId}&object_id=${id}&value=${vote}`
+            });
+            const data = await response.json();
+            if (data.success) {
+                this.closest('.vote-cell').querySelector('.vote-count').textContent = data.new_votes;
+                this.classList.toggle('active');
+            }
+        } catch (error) {
+            console.error('Vote error:', error);
+        }
+    });
+});
+</script>
+{% endblock %}
