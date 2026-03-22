@@ -172,3 +172,17 @@ yarn cli                         # Run platform CLI
 - Use single backticks (`code`) for inline code references
 - Prefer inline `# noqa: RULE` over global ignores for lint exceptions
 - Mark experimental features with clear warnings in docstrings
+
+### Common Cleanup Tasks
+
+```bash
+# Regenerate viewer dependencies after node_modules deletion
+cd viewer && yarn install --frozen-lockfile
+
+# Clean Python bytecode cache
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+find . -name "*.pyc" -delete
+
+# Verify viewer builds after cleanup
+cd viewer && yarn build
+```
