@@ -177,7 +177,7 @@ class PINVerificationTest(TestCase):
         self.user = User.objects.create_user(username='pinuser', password='testpass123')
         self.profile = self.user.chat_profile
         self.profile.two_step_enabled = True
-        self.profile.two_step_pin = '1234'
+        self.profile.set_two_step_pin('1234')
         self.profile.save()
 
     def test_two_step_verify_page(self):

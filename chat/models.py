@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.contrib.auth.hashers import make_password, check_password
 
 
 def upload_to(instance, filename):
@@ -20,12 +21,16 @@ class Profile(models.Model):
     is_online = models.BooleanField(default=False)
     two_step_enabled = models.BooleanField(default=False)
     two_step_pin = models.CharField(max_length=128, blank=True)
-    qr_code = models.CharField(max_length=255, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    privacy_last_seen = models.CharField(max_length=20, default='everyone')
-    privacy_profile = models.CharField(max_length=20, default='everyone')
-    privacy_read_receipts = models.CharField(max_length=20, default='everyone')
+    def set_two_step_pin(self, pin: str) -> None:
+        """Hash and set the two-step PIN."""
+        self.two_step_pin = make_password(pin)
+
+    def check_two_step_pin(self, pin: str) -> bool:
+        """Verify the two-step PIN against stored hash."""
+        if not self.two_step_pin:
+            return False
+        return check_password(pin, self.two_step_pin)
 
     def __str__(self):
         return self.user.username

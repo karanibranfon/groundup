@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F
+from django.db import transaction
 from .models import UserProfile, Question, Answer, Tag, Vote
 
 
@@ -75,8 +76,9 @@ def ask_question(request):
 
 def question_detail(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
-    question.view_count += 1
-    question.save(update_fields=['view_count'])
+    with transaction.atomic():
+        Question.objects.filter(pk=question_id).update(view_count=F('view_count') + 1)
+    question.refresh_from_db()
     
     answers = question.answers.all().order_by('-is_accepted', '-votes', 'created_at')
     

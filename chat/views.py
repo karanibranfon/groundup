@@ -81,8 +81,7 @@ def two_step_verify(request):
     
     if request.method == 'POST':
         pin = request.POST.get('pin')
-        stored_pin = user.chat_profile.two_step_pin
-        if stored_pin and hmac.compare_digest(stored_pin, pin):
+        if user.chat_profile.check_two_step_pin(pin):
             login(request, user)
             del request.session['pre_2fa_user_id']
             return redirect('chat_list')

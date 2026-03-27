@@ -192,8 +192,9 @@ class Feedback(models.Model):
 
 class EncryptionKey(models.Model):
     ENCRYPTION_MODE_CHOICES = [
-        ('itied', 'ITIED (Encryption Only)'),
-        ('itiedc', 'ITIEDC (Encryption + Compression)'),
+        ('itied', 'ITIED (DNA-Chaos, Legacy)'),
+        ('itiedc', 'ITIEDC (DNA-Chaos Compression, Legacy)'),
+        ('aes_gcm_zstd', 'AES-256-GCM + zstandard (Recommended)'),
     ]
     
     image = models.OneToOneField(
@@ -203,9 +204,9 @@ class EncryptionKey(models.Model):
         help_text="The image this encryption key belongs to"
     )
     mode = models.CharField(
-        max_length=10, 
+        max_length=15, 
         choices=ENCRYPTION_MODE_CHOICES,
-        default='itied',
+        default='aes_gcm_zstd',
         help_text="Encryption mode used"
     )
     dna_rule = models.IntegerField(

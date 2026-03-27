@@ -7,11 +7,13 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse, FileResponse, StreamingHttpResponse
 from django.conf import settings
 from django.core.paginator import Paginator
+from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import UserProfile, Patient, Study, Image, ImageProcessingLog, EncryptionKey
-from .services.dna_chaos_encryption import DNACryptoService
+from .services.production_crypto import ProductionCryptoService, CryptoParams
+from .services.dna_chaos_encryption import DNACryptoService, EncryptionParams
 
 
 def index(request):
@@ -276,7 +278,7 @@ def studies_list(request):
         
         patient_id = request.GET.get('patientId')
         
-        query = Study.objects.filter(created_by=request.user)
+        query = Study.objects.filter(created_by=request.user).select_related('patient')
         if patient_id:
             query = query.filter(patient_id=patient_id)
         
@@ -374,11 +376,12 @@ def study_detail(request, study_id):
 @permission_classes([IsAuthenticated])
 def upload_image(request):
     if request.method == 'POST':
-        user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
-        user_profile.check_and_reset_quota()
-        
-        if user_profile.daily_quota_used >= settings.DAILY_IMAGE_QUOTA and user_profile.account_type == 'free':
-            return Response({'message': 'Daily image quota exceeded. Please upgrade your account.'}, status=403)
+        with transaction.atomic():
+            user_profile = UserProfile.objects.select_for_update().get(user=request.user)
+            user_profile.check_and_reset_quota()
+            
+            if user_profile.daily_quota_used >= settings.DAILY_IMAGE_QUOTA and user_profile.account_type == 'free':
+                return Response({'message': 'Daily image quota exceeded. Please upgrade your account.'}, status=403)
         
         study_id = request.data.get('study_id')
         if not study_id:
@@ -426,9 +429,9 @@ def upload_image(request):
             width = 256
             height = len(image_bytes) // 256 if len(image_bytes) >= 256 else 1
             
-            # Step 3: Encrypt the image
-            crypto_service = DNACryptoService()
-            encrypted_data, params = crypto_service.encrypt_image(
+            # Step 3: Encrypt the image using production crypto
+            crypto_service = ProductionCryptoService()
+            encrypted_data, crypto_params = crypto_service.encrypt_compress_image(
                 image_bytes,
                 width,
                 height
@@ -450,15 +453,16 @@ def upload_image(request):
                 created_by=request.user,
             )
             
-            # Step 6: Create EncryptionKey record
+            # Step 6: Create EncryptionKey record with production crypto params
             EncryptionKey.objects.create(
                 image=image,
-                mode='itied',
-                dna_rule=params.dna_rule,
-                pwlc_p=params.pwlc_p,
-                pwlc_x0=params.pwlc_x0,
-                sha256_hash=params.sha256_hash,
-                encrypted_otp_key=encrypted_data[:1024] if len(encrypted_data) >= 1024 else encrypted_data
+                mode='aes_gcm_zstd',
+                dna_rule=0,
+                pwlc_p=0.0,
+                pwlc_x0=0.0,
+                sha256_hash='',
+                encrypted_otp_key=b'',
+                compression_metadata=crypto_service.params_to_dict(crypto_params)
             )
             
             # Step 7: Log the upload
@@ -469,9 +473,10 @@ def upload_image(request):
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', ''),
                 details=json.dumps({
-                    'encryption': 'dna_chaos_itied',
-                    'dna_rule': params.dna_rule,
-                    'original_size': file_size,
+                    'encryption': 'aes_gcm_zstd',
+                    'compressed': crypto_params.compressed,
+                    'original_size': crypto_params.original_size,
+                    'compressed_size': crypto_params.compressed_size,
                     'encrypted_size': len(encrypted_data)
                 })
             )
@@ -486,8 +491,8 @@ def upload_image(request):
                 'file_size': image.file_size,
                 'encrypted_size': len(encrypted_data),
                 'encryption': {
-                    'mode': 'dna_chaos_itied',
-                    'dna_rule': params.dna_rule
+                    'mode': 'aes_gcm_zstd',
+                    'compressed': crypto_params.compressed
                 }
             }, status=201)
             
@@ -552,20 +557,37 @@ def get_image_file(request, image_id):
         with open(resolved_path, 'rb') as f:
             encrypted_data = f.read()
         
-        # Decrypt the image
-        crypto_service = DNACryptoService()
-        
-        from .services.dna_chaos_encryption import EncryptionParams
-        dec_params = EncryptionParams(
-            dna_rule=enc_key.dna_rule,
-            pwlc_p=float(enc_key.pwlc_p),
-            pwlc_x0=float(enc_key.pwlc_x0),
-            sha256_hash=enc_key.sha256_hash,
-            image_width=256,
-            image_height=len(encrypted_data) // (256 * 4) if len(encrypted_data) >= 256 * 4 else 1
-        )
-        
-        decrypted_bytes = crypto_service.decrypt_image(encrypted_data, dec_params)
+        # Decrypt based on encryption mode
+        if enc_key.mode == 'aes_gcm_zstd':
+            prod_service = ProductionCryptoService()
+            crypto_params = prod_service.dict_to_params(enc_key.compression_metadata)
+            decrypted_bytes = prod_service.decrypt_decompress_image(encrypted_data, crypto_params)
+            log_details = {
+                'decryption': 'aes_gcm_zstd',
+                'compressed': crypto_params.compressed
+            }
+        else:
+            # Legacy DNA-Chaos decryption
+            import warnings
+            warnings.warn(
+                f"Decrypting legacy image with mode '{enc_key.mode}'. "
+                "Consider re-encrypting with production crypto.",
+                DeprecationWarning
+            )
+            dna_service = DNACryptoService()
+            dec_params = EncryptionParams(
+                dna_rule=enc_key.dna_rule,
+                pwlc_p=float(enc_key.pwlc_p),
+                pwlc_x0=float(enc_key.pwlc_x0),
+                sha256_hash=enc_key.sha256_hash,
+                image_width=256,
+                image_height=len(encrypted_data) // (256 * 4) if len(encrypted_data) >= 256 * 4 else 1
+            )
+            decrypted_bytes = dna_service.decrypt_image(encrypted_data, dec_params)
+            log_details = {
+                'decryption': 'dna_chaos_itied',
+                'dna_rule': enc_key.dna_rule
+            }
         
         # Save to decrypted folder for caching
         os.makedirs(settings.DECRYPTED_FOLDER, exist_ok=True)
@@ -580,10 +602,7 @@ def get_image_file(request, image_id):
             action_type='view',
             ip_address=request.META.get('REMOTE_ADDR'),
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
-            details=json.dumps({
-                'decryption': 'dna_chaos_itied',
-                'dna_rule': enc_key.dna_rule
-            })
+            details=json.dumps(log_details)
         )
         
         # Return decrypted file
@@ -645,7 +664,7 @@ def recent_images(request):
         limit = 5
     images = Image.objects.filter(
         created_by=request.user
-    ).select_related('study')[:limit]
+    ).select_related('study', 'patient')[:limit]
     
     return Response({
         'images': [
@@ -672,7 +691,7 @@ def recent_studies(request):
         limit = 5
     studies = Study.objects.filter(
         created_by=request.user
-    ).select_related('patient', 'patient')[:limit]
+    ).select_related('patient')[:limit]
     
     return Response({
         'studies': [
@@ -925,7 +944,7 @@ def enhance_image(request, image_id):
         return Response({'message': 'Image file not found'}, status=404)
     
     try:
-        from PIL import Image as PILImage, ImageEnhance, ImageFilter
+        from PIL import Image as PILImage, ImageEnhance, ImageFilter, ImageOps
         import io
         
         with PILImage.open(file_path) as img:
@@ -946,7 +965,7 @@ def enhance_image(request, image_id):
             elif enhancement_type == 'edge':
                 img = img.filter(ImageFilter.FIND_EDGES)
             elif enhancement_type == 'invert':
-                img = ImageEnhance.Invert(img)
+                img = ImageOps.invert(img)
             else:
                 enhancer = ImageEnhance.Contrast(img)
                 img = enhancer.enhance(1.2)

@@ -21,6 +21,7 @@ from .services.dna_chaos_encryption import (
     calculate_uaci,
     calculate_entropy,
 )
+from .services.production_crypto import ProductionCryptoService, CryptoParams
 
 
 class UserProfileModelTest(TestCase):
@@ -872,3 +873,176 @@ class SecurityPropertiesTest(TestCase):
         self.assertEqual(params.sha256_hash, restored_params.sha256_hash)
         self.assertEqual(params.image_width, restored_params.image_width)
         self.assertEqual(params.image_height, restored_params.image_height)
+
+
+class ProductionCryptoServiceTest(TestCase):
+    """Tests for the production-ready AES-GCM + zstandard encryption service."""
+
+    def setUp(self):
+        self.service = ProductionCryptoService(master_key=b'test_master_key_32_bytes_long_!')
+        self.sample_image_data = bytes([i % 256 for i in range(1024)])
+
+    def test_encrypt_decrypt_roundtrip(self):
+        """Test that encryption followed by decryption returns original data."""
+        encrypted, params = self.service.encrypt_image(self.sample_image_data)
+        decrypted = self.service.decrypt_image(encrypted, params)
+        
+        self.assertEqual(self.sample_image_data, decrypted)
+
+    def test_encrypt_produces_different_output(self):
+        """Test that encryption produces different output than input."""
+        encrypted, _ = self.service.encrypt_image(self.sample_image_data)
+        
+        self.assertNotEqual(self.sample_image_data, encrypted)
+
+    def test_encrypt_compress_decrypt_roundtrip(self):
+        """Test that encrypt+compress followed by decrypt+decompress returns original."""
+        encrypted, params = self.service.encrypt_compress_image(self.sample_image_data)
+        decrypted = self.service.decrypt_decompress_image(encrypted, params)
+        
+        self.assertEqual(self.sample_image_data, decrypted)
+        self.assertTrue(params.compressed)
+        self.assertLess(params.compressed_size, params.original_size)
+
+    def test_compression_reduces_size(self):
+        """Test that compression reduces size for compressible data."""
+        _, params = self.service.encrypt_compress_image(self.sample_image_data)
+        
+        self.assertTrue(params.compressed)
+        self.assertLess(params.compressed_size, params.original_size)
+
+    def test_different_nonces_produce_different_ciphertext(self):
+        """Test that same data encrypted with different nonces produces different ciphertext."""
+        encrypted1, params1 = self.service.encrypt_image(self.sample_image_data)
+        encrypted2, params2 = self.service.encrypt_image(self.sample_image_data)
+        
+        self.assertNotEqual(encrypted1, encrypted2)
+        self.assertNotEqual(params1.nonce, params2.nonce)
+        
+        self.assertEqual(self.sample_image_data, self.service.decrypt_image(encrypted1, params1))
+        self.assertEqual(self.sample_image_data, self.service.decrypt_image(encrypted2, params2))
+
+    def test_same_nonce_with_same_key_produces_same_ciphertext(self):
+        """Test that same params produce same ciphertext."""
+        params = CryptoParams(
+            nonce=b'0123456789ab',
+            salt=b'0123456789abcdef',
+            compressed=False,
+            original_size=len(self.sample_image_data),
+            compressed_size=0
+        )
+        
+        encrypted1, _ = self.service.encrypt_image(self.sample_image_data, params=params)
+        encrypted2, _ = self.service.encrypt_image(self.sample_image_data, params=params)
+        
+        self.assertEqual(encrypted1, encrypted2)
+
+    def test_wrong_nonce_fails_decryption(self):
+        """Test that decryption with wrong nonce fails."""
+        encrypted, params = self.service.encrypt_image(self.sample_image_data)
+        
+        wrong_params = CryptoParams(
+            nonce=b'0123456789ab',
+            salt=params.salt,
+            compressed=False,
+            original_size=params.original_size,
+            compressed_size=params.compressed_size
+        )
+        
+        from cryptography.exceptions import InvalidTag
+        with self.assertRaises(InvalidTag):
+            self.service.decrypt_image(encrypted, wrong_params)
+
+    def test_wrong_salt_fails_decryption(self):
+        """Test that decryption with wrong salt fails."""
+        encrypted, params = self.service.encrypt_image(self.sample_image_data)
+        
+        wrong_params = CryptoParams(
+            nonce=params.nonce,
+            salt=b'fedcba9876543210',
+            compressed=False,
+            original_size=params.original_size,
+            compressed_size=params.compressed_size
+        )
+        
+        from cryptography.exceptions import InvalidTag
+        with self.assertRaises(InvalidTag):
+            self.service.decrypt_image(encrypted, wrong_params)
+
+    def test_different_master_keys_cannot_decrypt(self):
+        """Test that different master keys cannot decrypt each other's data."""
+        service1 = ProductionCryptoService(master_key=b'master_key_one_32_bytes_!!!')
+        service2 = ProductionCryptoService(master_key=b'master_key_two_32_bytes_!!!')
+        
+        encrypted, params = service1.encrypt_image(self.sample_image_data)
+        
+        from cryptography.exceptions import InvalidTag
+        with self.assertRaises(InvalidTag):
+            service2.decrypt_image(encrypted, params)
+
+    def test_params_serialization(self):
+        """Test that params can be serialized to dict and restored."""
+        encrypted, params = self.service.encrypt_image(self.sample_image_data)
+        
+        params_dict = self.service.params_to_dict(params)
+        restored_params = self.service.dict_to_params(params_dict)
+        
+        self.assertEqual(params.nonce, restored_params.nonce)
+        self.assertEqual(params.salt, restored_params.salt)
+        self.assertEqual(params.compressed, restored_params.compressed)
+        self.assertEqual(params.original_size, restored_params.original_size)
+        
+        decrypted = self.service.decrypt_image(encrypted, restored_params)
+        self.assertEqual(self.sample_image_data, decrypted)
+
+    def test_params_json_serialization(self):
+        """Test that params can be serialized to JSON and restored."""
+        encrypted, params = self.service.encrypt_image(self.sample_image_data)
+        
+        json_str = self.service.params_to_json(params)
+        restored_params = self.service.json_to_params(json_str)
+        
+        decrypted = self.service.decrypt_image(encrypted, restored_params)
+        self.assertEqual(self.sample_image_data, decrypted)
+
+    def test_large_data_encryption(self):
+        """Test encryption of larger data."""
+        large_data = bytes([i % 256 for i in range(1024 * 100)])
+        
+        encrypted, params = self.service.encrypt_compress_image(large_data)
+        decrypted = self.service.decrypt_decompress_image(encrypted, params)
+        
+        self.assertEqual(large_data, decrypted)
+
+    def test_medical_image_simulation(self):
+        """Test encryption of simulated medical image data (DICOM-like)."""
+        header = b'DICM' + b'\x00' * 128
+        pixel_data = bytes([i % 256 for i in range(512 * 512)])
+        dicom_data = header + pixel_data
+        
+        encrypted, params = self.service.encrypt_compress_image(dicom_data)
+        decrypted = self.service.decrypt_decompress_image(encrypted, params)
+        
+        self.assertEqual(dicom_data, decrypted)
+        self.assertLess(params.compressed_size, params.original_size)
+
+    def test_empty_data(self):
+        """Test encryption of empty data."""
+        empty_data = b''
+        
+        encrypted, params = self.service.encrypt_image(empty_data)
+        decrypted = self.service.decrypt_image(encrypted, params)
+        
+        self.assertEqual(empty_data, decrypted)
+
+    def test_compression_levels(self):
+        """Test different compression levels."""
+        for level in [1, 3, 10, 22]:
+            encrypted, params = self.service.encrypt_compress_image(
+                self.sample_image_data,
+                compression_level=level
+            )
+            decrypted = self.service.decrypt_decompress_image(encrypted, params)
+            
+            self.assertEqual(self.sample_image_data, decrypted)
+            self.assertTrue(params.compressed)

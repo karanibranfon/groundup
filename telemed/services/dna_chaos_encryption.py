@@ -1,17 +1,23 @@
 """
 DNA-Chaos Image Encryption Service
 
-Implementation of the ITIEDC (Image-to-Image Encryption-Decryption-Compression) algorithm
-based on DNA encoding, chaotic maps (PWLCM), One-Time Pad (OTP), and arithmetic coding.
+DEPRECATED: This implementation is based on an academic paper and is NOT recommended
+for production use with sensitive medical data.
+
+For production, use ProductionCryptoService which uses:
+- AES-256-GCM for authenticated encryption
+- zstandard for compression
+
+This class is kept for backward compatibility with existing encrypted data.
+To migrate: decrypt with DNACryptoService and re-encrypt with ProductionCryptoService.
 
 Reference: "Robust Medical Image Encryption and Compression Using a DNA-Chaos Cryptosystem"
 Ahmed et al., The Journal of Engineering, 2025
-
-Author: Implementation for telemedicine application
 """
 
 import hashlib
 import struct
+import warnings
 import numpy as np
 from typing import Tuple, Optional, Dict, Any
 from dataclasses import dataclass
@@ -244,8 +250,14 @@ class DNACryptoService:
     """
     DNA-Chaos Image Encryption Service.
     
+    DEPRECATED: This implementation is based on an academic paper and is NOT
+    recommended for production use with sensitive medical data.
+    
     Implements the ITIEDC algorithm for secure medical image encryption
     using DNA encoding, chaotic maps, and one-time pad.
+    
+    Use ProductionCryptoService for new encryptions.
+    This class is kept for backward compatibility with existing encrypted data.
     """
     
     def __init__(self, master_key: Optional[bytes] = None):
@@ -256,6 +268,13 @@ class DNACryptoService:
             master_key: Optional master key for encrypting OTP keys in storage.
                        If not provided, OTP keys are stored as-is (not recommended for production).
         """
+        warnings.warn(
+            "DNACryptoService is deprecated. It uses academic cryptography that is "
+            "not suitable for production medical image encryption. "
+            "Use ProductionCryptoService instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         self.master_key = master_key or b'default_master_key_change_in_production'
         self.arithmetic_coder = ArithmeticCoder()
     
