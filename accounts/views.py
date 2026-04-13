@@ -32,8 +32,8 @@ def signup_view(request):
             password=password
         )
         
-        user.profile.phone = request.POST.get('phone', '')
-        user.profile.save()
+        from chat.models import Profile
+        Profile.objects.create(user=user, phone=request.POST.get('phone', ''))
         
         login(request, user)
         messages.success(request, f'Welcome, {username}! Your account has been created.')
